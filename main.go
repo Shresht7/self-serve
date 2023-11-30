@@ -9,6 +9,7 @@ import (
 	"os/signal"
 )
 
+// The default port to use
 const DEFAULT_PORT = 5327
 
 // A super simple static file server
