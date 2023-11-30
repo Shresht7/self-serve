@@ -5,7 +5,7 @@ A super simple static file server.
 ## 📦 Installation
 
 ```sh
-go get github.com/Shresht7/self-serve
+go install github.com/Shresht7/self-serve
 ```
 
 ## 📋 Usage
