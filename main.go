@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 )
 
 const DEFAULT_PORT = 5327
@@ -19,6 +21,15 @@ func main() {
 	// Print out the port to the console
 	fmt.Printf("File Server running on http://localhost:%v", *port)
 	fmt.Print("\t\u001b[90m| Ctrl+C to quit\u001b[99m\n") // Use ansi codes to color it gray
+
+	// Handle graceful exit
+	go func() {
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, os.Interrupt)
+		<-signalChan
+		log.Println("Closing the server")
+		os.Exit(0)
+	}()
 
 	// Serve the directory on the given port
 	err := SelfServe(*dir, *port)
