@@ -21,7 +21,7 @@ func main() {
 
 	// Print out the port to the console
 	fmt.Printf("File Server running on http://localhost:%v", *port)
-	fmt.Print("\t\u001b[90m| Ctrl+C to quit\u001b[99m\n") // Use ansi codes to color it gray
+	fmt.Print("\t\u001b[90m| Ctrl+C to quit\u001b[0m\n") // Use ansi codes to color it gray
 
 	// Handle graceful exit
 	go func() {
