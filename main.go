@@ -23,10 +23,11 @@ func main() {
 	// Parse the command line arguments
 	dir := flag.String("dir", cwd, "The directory to serve")
 	port := flag.Int("port", DEFAULT_PORT, "The port number to use")
+	host := flag.String("host", "localhost", "The host to use")
 	flag.Parse()
 
 	// Print out the port to the console
-	fmt.Printf("File Server running on http://localhost:%v", *port)
+	fmt.Printf("File Server running on http://%s:%v", *host, *port)
 	fmt.Print("\t\u001b[90m| Ctrl+C to quit\u001b[0m\n") // Use ansi codes to color it gray
 
 	// Handle graceful exit
@@ -34,12 +35,12 @@ func main() {
 		signalChan := make(chan os.Signal, 1)
 		signal.Notify(signalChan, os.Interrupt)
 		<-signalChan
-		log.Println("Closing the server")
+		log.Println("-- Closing the server")
 		os.Exit(0)
 	}()
 
 	// Serve the directory on the given port
-	err = SelfServe(*dir, *port)
+	err = SelfServe(*dir, *host, *port)
 	// If there is an error crash the server
 	if err != nil {
 		log.Fatalln(err)
@@ -47,8 +48,8 @@ func main() {
 }
 
 // Serve the given directory on the given port
-func SelfServe(dir string, port int) error {
-	host := fmt.Sprintf(":%v", port) // 5327 => :5327
+func SelfServe(dir, host string, port int) error {
+	addr := fmt.Sprintf("%s:%v", host, port)
 	fileServer := http.FileServer(http.Dir(dir))
 
 	// HTTP Handler Function
@@ -57,5 +58,5 @@ func SelfServe(dir string, port int) error {
 		fileServer.ServeHTTP(w, r)                                                        // Serve the files
 	})
 
-	return http.ListenAndServe(host, handler)
+	return http.ListenAndServe(addr, handler)
 }
