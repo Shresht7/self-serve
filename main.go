@@ -7,7 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 )
+
+// The default host to use
+const DEFAULT_HOST = "localhost"
 
 // The default port to use
 const DEFAULT_PORT = 5327
@@ -20,10 +24,13 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
+	// Get the default host and port configuration from environment variables
+	defaultHost, defaultPort := getDefaultConfiguration()
+
 	// Parse the command line arguments
 	dir := flag.String("dir", cwd, "The directory to serve")
-	port := flag.Int("port", DEFAULT_PORT, "The port number to use")
-	host := flag.String("host", "localhost", "The host to use")
+	port := flag.Int("port", defaultPort, "The port number to use")
+	host := flag.String("host", defaultHost, "The host to use")
 	flag.Parse()
 
 	// Print out the port to the console
@@ -59,4 +66,19 @@ func SelfServe(dir, host string, port int) error {
 	})
 
 	return http.ListenAndServe(addr, handler)
+}
+
+// Read configuration from Environment Variables
+func getDefaultConfiguration() (host string, port int) {
+	// Read the HOST variable
+	host = os.Getenv("HOST")
+	if host == "" {
+		host = DEFAULT_HOST
+	}
+	// Read the PORT variable
+	port, err := strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		port = DEFAULT_PORT
+	}
+	return host, port
 }
