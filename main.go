@@ -14,8 +14,14 @@ const DEFAULT_PORT = 5327
 
 // A super simple static file server
 func main() {
+	// Get current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
 	// Parse the command line arguments
-	dir := flag.String("dir", ".", "The directory to serve")
+	dir := flag.String("dir", cwd, "The directory to serve")
 	port := flag.Int("port", DEFAULT_PORT, "The port number to use")
 	flag.Parse()
 
@@ -33,7 +39,7 @@ func main() {
 	}()
 
 	// Serve the directory on the given port
-	err := SelfServe(*dir, *port)
+	err = SelfServe(*dir, *port)
 	// If there is an error crash the server
 	if err != nil {
 		log.Fatalln(err)
