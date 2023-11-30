@@ -44,5 +44,12 @@ func main() {
 func SelfServe(dir string, port int) error {
 	host := fmt.Sprintf(":%v", port) // 5327 => :5327
 	fileServer := http.FileServer(http.Dir(dir))
-	return http.ListenAndServe(host, fileServer)
+
+	// HTTP Handler Function
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("\u001b[90m-- %s \u001b[92m%s\u001b[0m %s\n", r.RemoteAddr, r.Method, r.URL) // Log the request
+		fileServer.ServeHTTP(w, r)                                                              // Serve the files
+	})
+
+	return http.ListenAndServe(host, handler)
 }
