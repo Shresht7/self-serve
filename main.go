@@ -53,6 +53,7 @@ func (s *Self) Serve(dir string) error {
 	s.server = &http.Server{Addr: addr, Handler: handler}
 
 	// Start the server
+	fmt.Println() // empty line before server start
 	log.Println("Server started on", addr)
 	return s.server.ListenAndServe()
 }
@@ -123,7 +124,7 @@ func main() {
 
 	// Print out the port to the console
 	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", Self.host, Self.port)
-	fmt.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n\n") // Use ansi codes to color it gray
+	fmt.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n") // Use ansi codes to color it gray
 
 	// Handle graceful exit
 	go Self.handleGracefulExit()
