@@ -57,6 +57,39 @@ func (s *Self) Serve(dir string) error {
 	return s.server.ListenAndServe()
 }
 
+// Handle graceful exit
+func (s *Self) handleGracefulExit() {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	<-signalChan
+	log.Println("Closing the server...")
+	if err := s.server.Shutdown(context.Background()); err != nil {
+		log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
+	}
+	s.restart <- false // Signal not to restart
+}
+
+// Listen for keyboard input to restart the server
+func (s *Self) handleRestart() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		text, _ := reader.ReadString('\n')
+		if strings.TrimSpace(text) == "r" {
+			// Restart the server
+			log.Println("Restarting the server...")
+			if err := s.server.Shutdown(context.Background()); err != nil {
+				log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
+			}
+			s.restart <- true // Signal to restart
+		}
+	}
+}
+
+// Boolean indicating whether the server is done serving
+func (s *Self) IsDone() bool {
+	return !<-s.restart // `true` when not restarting
+}
+
 // ----
 // MAIN
 // ----
@@ -93,34 +126,12 @@ func main() {
 	log.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n\n") // Use ansi codes to color it gray
 
 	// Handle graceful exit
-	go func() {
-		signalChan := make(chan os.Signal, 1)
-		signal.Notify(signalChan, os.Interrupt)
-		<-signalChan
-		log.Println("Closing the server...")
-		if err := Self.server.Shutdown(context.Background()); err != nil {
-			log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
-		}
-		Self.restart <- false // Signal not to restart
-	}()
+	go Self.handleGracefulExit()
 
 	// Listen for keyboard input to restart the server
-	go func() {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			text, _ := reader.ReadString('\n')
-			if strings.TrimSpace(text) == "r" {
-				// Restart the server
-				log.Println("Restarting the server...")
-				if err := Self.server.Shutdown(context.Background()); err != nil {
-					log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
-				}
-				Self.restart <- true // Signal to restart
-			}
-		}
-	}()
+	go Self.handleRestart()
 
-	// Start indefinite loop to serve the files and restart the server when needed
+	// Start indefinite loop to serve the files and restart the server is not done
 	for {
 		// Serve the files
 		err := Self.Serve(*dir)
@@ -128,10 +139,8 @@ func main() {
 			log.Println(err.Error())
 		}
 
-		// Listen for restart signal from the channel
-		// If the restart signal is `false`, then exit the loop
-		shouldContinue := <-Self.restart
-		if !shouldContinue {
+		// If the server is done serving, break out of the loop
+		if Self.IsDone() {
 			break
 		}
 	}
