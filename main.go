@@ -42,8 +42,8 @@ func main() {
 	flag.Parse()
 
 	// Print out the port to the console
-	fmt.Printf("File Server running on http://%s:%v", *host, *port)
-	fmt.Print("\t\u001b[90m| Ctrl+C to quit\u001b[0m\n") // Use ansi codes to color it gray
+	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", *host, *port)
+	fmt.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n\n") // Use ansi codes to color it gray
 
 	// Handle graceful exit
 	go func() {
@@ -102,7 +102,7 @@ func SelfServe(dir, host string, port int) error {
 	server = &http.Server{Addr: addr, Handler: handler}
 
 	// Start the server
-	log.Println("Starting the server")
+	log.Println("Server started")
 	return server.ListenAndServe()
 }
 
