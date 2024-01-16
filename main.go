@@ -53,7 +53,7 @@ func (s *Self) Serve(dir string) error {
 	s.server = &http.Server{Addr: addr, Handler: handler}
 
 	// Start the server
-	log.Println("Server started")
+	log.Println("Server started on", addr)
 	return s.server.ListenAndServe()
 }
 
