@@ -13,17 +13,60 @@ import (
 	"strings"
 )
 
-// The server instance
-var server *http.Server
+// ==========
+// SELF SERVE
+// ==========
 
-// A channel to listen for restarts
-var restart = make(chan bool)
+// Self Serve is a super simple static file server
+type Self struct {
+	// The host to serve on
+	host string
+	// The port to use
+	port int
+	// The server instance
+	server *http.Server
+	// A channel to listen for restarts
+	restart chan bool
+}
 
-// The default host to use
-const DEFAULT_HOST = "localhost"
+// Create a new instance of Self
+func NewSelf(host string, port int) *Self {
+	return &Self{
+		host:    host,
+		port:    port,
+		restart: make(chan bool),
+	}
+}
 
-// The default port to use
-const DEFAULT_PORT = 5327
+// Serve the given directory
+func (s *Self) Serve(dir string) error {
+	addr := fmt.Sprintf("%s:%v", s.host, s.port)
+	fileServer := http.FileServer(http.Dir(dir))
+
+	// HTTP Handler Function
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("\u001b[90m-- %s \u001b[92m%s\u001b[0m %s\n", r.RemoteAddr, r.Method, r.URL) // Log the request
+		fileServer.ServeHTTP(w, r)                                                              // Serve the files
+	})
+
+	// Setup the server instance
+	s.server = &http.Server{Addr: addr, Handler: handler}
+
+	// Start the server
+	log.Println("Server started")
+	return s.server.ListenAndServe()
+}
+
+// ----
+// MAIN
+// ----
+
+const (
+	// The default host to use
+	DEFAULT_HOST = "localhost"
+	// The default port to use
+	DEFAULT_PORT = 5327
+)
 
 // A super simple static file server
 func main() {
@@ -42,8 +85,11 @@ func main() {
 	host := flag.String("host", defaultHost, "The host to use")
 	flag.Parse()
 
+	// Instantiate the Self Serve
+	Self := NewSelf(*host, *port)
+
 	// Print out the port to the console
-	log.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", *host, *port)
+	log.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", Self.host, Self.port)
 	log.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n\n") // Use ansi codes to color it gray
 
 	// Handle graceful exit
@@ -52,10 +98,10 @@ func main() {
 		signal.Notify(signalChan, os.Interrupt)
 		<-signalChan
 		log.Println("Closing the server...")
-		if err := server.Shutdown(context.Background()); err != nil {
+		if err := Self.server.Shutdown(context.Background()); err != nil {
 			log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
 		}
-		restart <- false // Signal not to restart
+		Self.restart <- false // Signal not to restart
 	}()
 
 	// Listen for keyboard input to restart the server
@@ -66,10 +112,10 @@ func main() {
 			if strings.TrimSpace(text) == "r" {
 				// Restart the server
 				log.Println("Restarting the server...")
-				if err := server.Shutdown(context.Background()); err != nil {
+				if err := Self.server.Shutdown(context.Background()); err != nil {
 					log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
 				}
-				restart <- true // Signal to restart
+				Self.restart <- true // Signal to restart
 			}
 		}
 	}()
@@ -77,14 +123,14 @@ func main() {
 	// Start indefinite loop to serve the files and restart the server when needed
 	for {
 		// Serve the files
-		err := SelfServe(*dir, *host, *port)
+		err := Self.Serve(*dir)
 		if err != nil {
 			log.Println(err.Error())
 		}
 
 		// Listen for restart signal from the channel
 		// If the restart signal is `false`, then exit the loop
-		shouldContinue := <-restart
+		shouldContinue := <-Self.restart
 		if !shouldContinue {
 			break
 		}
@@ -92,24 +138,9 @@ func main() {
 
 }
 
-// Serve the given directory on the given port
-func SelfServe(dir, host string, port int) error {
-	addr := fmt.Sprintf("%s:%v", host, port)
-	fileServer := http.FileServer(http.Dir(dir))
-
-	// HTTP Handler Function
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("\u001b[90m-- %s \u001b[92m%s\u001b[0m %s\n", r.RemoteAddr, r.Method, r.URL) // Log the request
-		fileServer.ServeHTTP(w, r)                                                              // Serve the files
-	})
-
-	// Setup the server instance
-	server = &http.Server{Addr: addr, Handler: handler}
-
-	// Start the server
-	log.Println("Server started")
-	return server.ListenAndServe()
-}
+// ----------------
+// HELPER FUNCTIONS
+// ----------------
 
 // Read configuration from Environment Variables
 func getDefaultConfiguration() (host string, port int) {
