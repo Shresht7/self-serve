@@ -16,6 +16,10 @@ self-serve --port=5327
 
 Serve the current directory on `localhost:5327`
 
+
+> [!NOTE]
+> You can type `r` and press `enter` to restart the server.
+
 ## 📕 Reference
 
 ### `--port`
