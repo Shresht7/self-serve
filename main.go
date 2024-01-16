@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -8,7 +9,14 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 )
+
+// The server instance
+var server *http.Server
+
+// A channel to listen for restarts
+var restart = make(chan bool)
 
 // The default host to use
 const DEFAULT_HOST = "localhost"
@@ -42,16 +50,41 @@ func main() {
 		signalChan := make(chan os.Signal, 1)
 		signal.Notify(signalChan, os.Interrupt)
 		<-signalChan
-		log.Println("-- Closing the server")
-		os.Exit(0)
+		log.Println("Closing the server...")
+		server.Close()   // Close the server
+		restart <- false // Signal not to restart
 	}()
 
-	// Serve the directory on the given port
-	err = SelfServe(*dir, *host, *port)
-	// If there is an error crash the server
-	if err != nil {
-		log.Fatalln(err)
+	// Listen for keyboard input to restart the server
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			text, _ := reader.ReadString('\n')
+			if strings.TrimSpace(text) == "r" {
+				// Restart the server
+				log.Println("Restarting the server...")
+				server.Close()  // Close the server
+				restart <- true // Signal to restart
+			}
+		}
+	}()
+
+	// Start indefinite loop to serve the files and restart the server when needed
+	for {
+		// Serve the files
+		err := SelfServe(*dir, *host, *port)
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		// Listen for restart signal from the channel
+		// If the restart signal is `false`, then exit the loop
+		shouldContinue := <-restart
+		if !shouldContinue {
+			break
+		}
 	}
+
 }
 
 // Serve the given directory on the given port
@@ -65,7 +98,12 @@ func SelfServe(dir, host string, port int) error {
 		fileServer.ServeHTTP(w, r)                                                              // Serve the files
 	})
 
-	return http.ListenAndServe(addr, handler)
+	// Setup the server instance
+	server = &http.Server{Addr: addr, Handler: handler}
+
+	// Start the server
+	log.Println("Starting the server")
+	return server.ListenAndServe()
 }
 
 // Read configuration from Environment Variables
