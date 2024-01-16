@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -42,8 +43,8 @@ func main() {
 	flag.Parse()
 
 	// Print out the port to the console
-	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", *host, *port)
-	fmt.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n\n") // Use ansi codes to color it gray
+	log.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", *host, *port)
+	log.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n\n") // Use ansi codes to color it gray
 
 	// Handle graceful exit
 	go func() {
@@ -51,7 +52,9 @@ func main() {
 		signal.Notify(signalChan, os.Interrupt)
 		<-signalChan
 		log.Println("Closing the server...")
-		server.Close()   // Close the server
+		if err := server.Shutdown(context.Background()); err != nil {
+			log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
+		}
 		restart <- false // Signal not to restart
 	}()
 
@@ -63,7 +66,9 @@ func main() {
 			if strings.TrimSpace(text) == "r" {
 				// Restart the server
 				log.Println("Restarting the server...")
-				server.Close()  // Close the server
+				if err := server.Shutdown(context.Background()); err != nil {
+					log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
+				}
 				restart <- true // Signal to restart
 			}
 		}
