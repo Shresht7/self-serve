@@ -23,6 +23,8 @@ type Self struct {
 	host string
 	// The port to use
 	port int
+	// The directory to serve
+	dir string
 	// The server instance
 	server *http.Server
 	// A channel to listen for restarts
@@ -30,7 +32,7 @@ type Self struct {
 }
 
 // Create a new instance of Self
-func NewSelf(host string, port int) *Self {
+func NewSelf(host, dir string, port int) *Self {
 	return &Self{
 		host:    host,
 		port:    port,
@@ -39,9 +41,9 @@ func NewSelf(host string, port int) *Self {
 }
 
 // Serve the given directory
-func (s *Self) Serve(dir string) error {
+func (s *Self) Serve() error {
 	addr := fmt.Sprintf("%s:%v", s.host, s.port)
-	fileServer := http.FileServer(http.Dir(dir))
+	fileServer := http.FileServer(http.Dir(s.dir))
 
 	// HTTP Handler Function
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +122,7 @@ func main() {
 	flag.Parse()
 
 	// Instantiate the Self Serve
-	Self := NewSelf(*host, *port)
+	Self := NewSelf(*host, *dir, *port)
 
 	// Print out the port to the console
 	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", Self.host, Self.port)
@@ -135,7 +137,7 @@ func main() {
 	// Start indefinite loop to serve the files and restart the server is not done
 	for {
 		// Serve the files
-		err := Self.Serve(*dir)
+		err := Self.Serve()
 		if err != nil {
 			log.Println(err.Error())
 		}
