@@ -36,6 +36,7 @@ func NewSelf(host, dir string, port int) *Self {
 	return &Self{
 		host:    host,
 		port:    port,
+		dir:     dir,
 		restart: make(chan bool),
 	}
 }
