@@ -100,6 +100,9 @@ const (
 	DEFAULT_PORT = 5327
 )
 
+// The version number of the application
+const VERSION = "0.1.0"
+
 // A super simple static file server
 func main() {
 	// Get current working directory
@@ -115,7 +118,14 @@ func main() {
 	dir := flag.String("dir", cwd, "The directory to serve")
 	port := flag.Int("port", defaultPort, "The port number to use")
 	host := flag.String("host", defaultHost, "The host to use")
+	version := flag.Bool("version", false, "Print the version number")
 	flag.Parse()
+
+	// if --version is set, print the version number and exit
+	if *version {
+		fmt.Println(VERSION)
+		return
+	}
 
 	// Instantiate the Self Serve
 	Self := NewSelf(*host, *dir, *port)
