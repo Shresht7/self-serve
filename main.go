@@ -19,16 +19,11 @@ import (
 
 // Self Serve is a super simple static file server
 type Self struct {
-	// The host to serve on
-	host string
-	// The port to use
-	port int
-	// The directory to serve
-	dir string
-	// The server instance
-	server *http.Server
-	// A channel to listen for restarts
-	restart chan bool
+	host    string       // The host to serve on
+	port    int          // The port to use
+	dir     string       // The directory to serve
+	server  *http.Server // The server instance
+	restart chan bool    // A channel to listen for restarts
 }
 
 // Create a new instance of Self
@@ -125,7 +120,7 @@ func main() {
 	// Instantiate the Self Serve
 	Self := NewSelf(*host, *dir, *port)
 
-	// Print out the port to the console
+	// Print out the address to the console
 	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", Self.host, Self.port)
 	fmt.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n") // Use ansi codes to color it gray
 
@@ -135,7 +130,7 @@ func main() {
 	// Listen for keyboard input to restart the server
 	go Self.handleRestart()
 
-	// Start indefinite loop to serve the files and restart the server is not done
+	// Start serving the files until done
 	for {
 		// Serve the files
 		err := Self.Serve()
