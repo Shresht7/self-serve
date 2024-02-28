@@ -118,12 +118,12 @@ func main() {
 	dir := flag.String("dir", cwd, "The directory to serve")
 	port := flag.Int("port", defaultPort, "The port number to use")
 	host := flag.String("host", defaultHost, "The host to use")
-	version := flag.String("version", VERSION, "Print the version number")
+	version := flag.Bool("version", false, "Print the version number")
 	flag.Parse()
 
 	// if --version is set, print the version number and exit
-	if *version != "" {
-		fmt.Println(*version)
+	if *version {
+		fmt.Println(VERSION)
 		return
 	}
 
