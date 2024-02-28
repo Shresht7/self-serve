@@ -22,17 +22,23 @@ Serve the current directory on `localhost:5327`
 
 ## 📕 Reference
 
+### `--dir`
+
+The directory to serve.
+
+- `Default: .` (The current directory)
+
 ### `--port`
 
 The port to use to serve the files.
 
 - `Default: 5327`
 
-### `--dir`
+### `--version`
 
-The directory to serve.
+Print the version number of the cli application.
 
-- `Default: .` (The current directory)
+- `Default: false`
 
 ---
 
