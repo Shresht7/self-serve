@@ -8,8 +8,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
+	"time"
 )
 
 // ==========
@@ -18,10 +21,11 @@ import (
 
 // Self Serve is a super simple static file server
 type Self struct {
-	host   string       // The host to serve on
-	port   int          // The port to use
-	dir    string       // The directory to serve
-	server *http.Server // The server instance
+	host         string       // The host to serve on
+	port         int          // The port to use
+	dir          string       // The directory to serve
+	server       *http.Server // The server instance
+	lastModified int64        // The timestamp of when the directory was last modified
 }
 
 // Create a new instance of Self
@@ -38,14 +42,46 @@ func (s *Self) Serve(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%v", s.host, s.port)
 	fileServer := http.FileServer(http.Dir(s.dir))
 
+	// Create a mux server to handle multiple routes
+	mux := http.NewServeMux()
+
 	// HTTP Handler Function
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("\u001b[90m-- %s \u001b[92m%s\u001b[0m %s\n", r.RemoteAddr, r.Method, r.URL) // Log the request
-		fileServer.ServeHTTP(w, r)                                                              // Serve the files
-	})
+
+		// Inject live-reload script into HTML responses
+		if strings.HasSuffix(r.URL.Path, ".html") {
+			// Read the requested file
+			filePath := filepath.Join(s.dir, r.URL.Path)
+			data, err := os.ReadFile(filePath)
+			if err != nil {
+				http.Error(w, "File not found", http.StatusNotFound)
+				return
+			}
+
+			// Inject JavaScript live-reload script
+			reloadScript := `<script>
+                setInterval(() => fetch('/reload').then(res => res.text()).then(flag => { 
+                    if (flag === "reload") { location.reload(); }
+                }), 1000);
+            </script>`
+
+			modifiedHTML := strings.Replace(string(data), "</body>", reloadScript+"</body>", 1)
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(modifiedHTML))
+			return
+		}
+
+		fileServer.ServeHTTP(w, r) // Serve the files
+	}))
+
+	// Handle the reload
+	mux.Handle("/reload", http.HandlerFunc(s.hotReload))
 
 	// Setup the server instance
-	s.server = &http.Server{Addr: addr, Handler: handler}
+	s.server = &http.Server{Addr: addr, Handler: mux}
+
+	go s.watchChanges()
 
 	// Start the server in a go-routine
 	serverErr := make(chan error, 1)
@@ -66,6 +102,24 @@ func (s *Self) Serve(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Self) watchChanges() {
+	for {
+		time.Sleep(time.Second)
+		newTime := getLastModified(s.dir)
+		if newTime > s.lastModified {
+			s.lastModified = newTime
+		}
+	}
+}
+
+func (s *Self) hotReload(w http.ResponseWriter, r *http.Request) {
+	if getLastModified(s.dir) > s.lastModified {
+		fmt.Fprintf(w, "reload")
+	} else {
+		fmt.Fprintf(w, "ok")
+	}
 }
 
 // ----
@@ -147,4 +201,15 @@ func getDefaultConfiguration() (host string, port int) {
 		port = DEFAULT_PORT
 	}
 	return host, port
+}
+
+func getLastModified(dir string) int64 {
+	var latest int64
+	filepath.Walk(dir, func(_ string, info os.FileInfo, err error) error {
+		if err == nil && info.ModTime().Unix() > latest {
+			latest = info.ModTime().Unix()
+		}
+		return nil
+	})
+	return latest
 }
