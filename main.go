@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"syscall"
 )
 
 // ==========
@@ -33,7 +34,7 @@ func NewSelf(host, dir string, port int) *Self {
 }
 
 // Serve the given directory
-func (s *Self) Serve() error {
+func (s *Self) Serve(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%v", s.host, s.port)
 	fileServer := http.FileServer(http.Dir(s.dir))
 
@@ -46,21 +47,25 @@ func (s *Self) Serve() error {
 	// Setup the server instance
 	s.server = &http.Server{Addr: addr, Handler: handler}
 
-	// Start the server
-	fmt.Println() // empty line before server start
-	log.Println("Server started on", addr)
-	return s.server.ListenAndServe()
-}
+	// Start the server in a go-routine
+	serverErr := make(chan error, 1)
+	go func() {
+		log.Println("Server started on", addr)
+		serverErr <- s.server.ListenAndServe()
+	}()
 
-// Handle graceful exit
-func (s *Self) handleGracefulExit() {
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
-	log.Println("Closing the server...")
-	if err := s.server.Shutdown(context.Background()); err != nil {
-		log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
+	// Wait for either the shutdown signal or server error
+	select {
+	case <-ctx.Done():
+		log.Println("Server shutting down...")
+		return s.server.Shutdown(context.Background())
+	case err := <-serverErr:
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("server error: %v", err)
+		}
 	}
+
+	return nil
 }
 
 // ----
@@ -108,13 +113,21 @@ func main() {
 	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m\n", Self.host, Self.port)
 
 	// Handle graceful exit
-	go Self.handleGracefulExit()
+	ctx, cancel := context.WithCancel(context.Background())
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-signalChan
+		cancel()
+	}()
 
 	// Serve the files
-	err = Self.Serve()
+	err = Self.Serve(ctx)
 	if err != nil {
 		log.Fatalf("Failed to serve files: %v", err.Error())
 	}
+
+	log.Println("Server shutdown complete")
 }
 
 // ----------------
