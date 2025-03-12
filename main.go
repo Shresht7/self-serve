@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 )
 
 // ==========
@@ -19,20 +17,18 @@ import (
 
 // Self Serve is a super simple static file server
 type Self struct {
-	host    string       // The host to serve on
-	port    int          // The port to use
-	dir     string       // The directory to serve
-	server  *http.Server // The server instance
-	restart chan bool    // A channel to listen for restarts
+	host   string       // The host to serve on
+	port   int          // The port to use
+	dir    string       // The directory to serve
+	server *http.Server // The server instance
 }
 
 // Create a new instance of Self
 func NewSelf(host, dir string, port int) *Self {
 	return &Self{
-		host:    host,
-		port:    port,
-		dir:     dir,
-		restart: make(chan bool),
+		host: host,
+		port: port,
+		dir:  dir,
 	}
 }
 
@@ -65,28 +61,6 @@ func (s *Self) handleGracefulExit() {
 	if err := s.server.Shutdown(context.Background()); err != nil {
 		log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
 	}
-	s.restart <- false // Signal not to restart
-}
-
-// Listen for keyboard input to restart the server
-func (s *Self) handleRestart() {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		text, _ := reader.ReadString('\n')
-		if strings.TrimSpace(text) == "r" {
-			// Restart the server
-			log.Println("Restarting the server...")
-			if err := s.server.Shutdown(context.Background()); err != nil {
-				log.Fatalf("Could not gracefully shutdown the server: %v\n", err)
-			}
-			s.restart <- true // Signal to restart
-		}
-	}
-}
-
-// Boolean indicating whether the server is done serving
-func (s *Self) IsDone() bool {
-	return !<-s.restart // `true` when not restarting
 }
 
 // ----
@@ -101,14 +75,14 @@ const (
 )
 
 // The version number of the application
-const VERSION = "0.1.0"
+const VERSION = "0.2.0"
 
 // A super simple static file server
 func main() {
 	// Get current working directory
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("Failed to get the working directory: %v", err.Error())
 	}
 
 	// Get the default host and port configuration from environment variables
@@ -131,29 +105,16 @@ func main() {
 	Self := NewSelf(*host, *dir, *port)
 
 	// Print out the address to the console
-	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m", Self.host, Self.port)
-	fmt.Print("\t\u001b[90m| Press `r` then `enter` to restart • `Ctrl+C` to quit\u001b[0m\n") // Use ansi codes to color it gray
+	fmt.Printf("File Server running on \u001b[4;36mhttp://%s:%v\u001b[0m\n", Self.host, Self.port)
 
 	// Handle graceful exit
 	go Self.handleGracefulExit()
 
-	// Listen for keyboard input to restart the server
-	go Self.handleRestart()
-
-	// Start serving the files until done
-	for {
-		// Serve the files
-		err := Self.Serve()
-		if err != nil {
-			log.Println(err.Error())
-		}
-
-		// If the server is done serving, break out of the loop
-		if Self.IsDone() {
-			break
-		}
+	// Serve the files
+	err = Self.Serve()
+	if err != nil {
+		log.Fatalf("Failed to serve files: %v", err.Error())
 	}
-
 }
 
 // ----------------
