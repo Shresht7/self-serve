@@ -6,23 +6,34 @@ class Self {
     constructor(
         private dir: string,
         private host: string,
-        private port: number
+        private port: number,
+        private abortableController: AbortController = new AbortController(),
     ) { }
 
     /** Starts the server */
-    serve() {
+    async serve() {
         const handler = (req: Request): Promise<Response> => {
             const url = new URL(req.url)
             console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`);
             return this.serveStaticFile(url.pathname)
         }
 
-        Deno.serve({
+        const server = Deno.serve({
             hostname: this.host,
-            port: this.port
+            port: this.port,
+            signal: this.abortableController.signal,
         }, handler)
 
         console.log(`Server started on http://${this.host}:${this.port}`)
+
+        try {
+            await server.finished
+        } catch (error) {
+            const { name } = error as Error
+            if (name !== 'AbortError') {
+                throw error
+            }
+        }
     }
 
     /** Helper function to get the IP Address of the client */
@@ -80,6 +91,12 @@ class Self {
             'txt': 'text/plain',
         };
         return mimeTypes[ext || ''] || 'text/plain';
+    }
+
+    /** Shuts down the server */
+    shutdown() {
+        console.log('Shutting down server...')
+        this.abortableController.abort()
     }
 }
 
@@ -151,8 +168,21 @@ async function main() {
     // Initialize the self-server
     const self = new Self(args.dir, args.host, args.port)
 
+    console.log(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`);
+
+    // Handle graceful shutdown
+    Deno.addSignalListener("SIGINT", () => {
+        self.shutdown()
+    })
+
     // Self Serve
-    await self.serve()
+    try {
+        await self.serve()
+        console.log('Server shutdown')
+    } catch (error) {
+        console.error("Failed to serve files: ", error);
+        Deno.exit(1)
+    }
 }
 
 // This file is being run directly as the main program
