@@ -27,8 +27,49 @@ class Self {
 // MAIN
 // ----
 
+const VERSION = "v0.3.0"
+
+const DEFAULT_HOST = "localhost"
+const DEFAULT_PORT = "5327"
+
+/** Parses command-line arguments and returns an object with the parsed values */
+function parseArgs(args: string[]): { dir: string, host: string, port: number, version: boolean } {
+    let dir = Deno.cwd()
+    let host = Deno.env.get("HOST") ?? DEFAULT_HOST
+    let port = parseInt(Deno.env.get("PORT") ?? DEFAULT_PORT)
+    let version = false
+
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i]
+        if (arg === "-v" || arg === "--version") {
+            version = true
+        } else if (arg === "-d" || arg === "--dir") {
+            dir = args.at(++i) ?? dir
+        } else if (arg === "-h" || arg === "--host") {
+            host = args.at(++i) ?? host
+        } else if (arg === "-p" || arg === "--port") {
+            port = parseInt(args.at(++i) ?? port.toString())
+        }
+    }
+
+    return { dir, host, port, version }
+}
+
+/** The main entrypoint of the application */
 async function main() {
-    const self = new Self(".", "localhost", 8080)
+    // Parse the command-line arguments
+    const args = parseArgs(Deno.args)
+
+    // Show the version number if `-v` or `--version` command-line option was passed in
+    if (args.version) {
+        console.log(VERSION)
+        return Deno.exit(0)
+    }
+
+    // Initialize the self-server
+    const self = new Self(args.dir, args.host, args.port)
+
+    // Self Serve
     await self.serve()
 }
 
