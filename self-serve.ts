@@ -48,8 +48,8 @@ Options:
 /** Parses command-line arguments and returns an object with the parsed values */
 function parseArgs(args: string[]): { dir: string, host: string, port: number, version: boolean, help: boolean } {
     let dir = Deno.cwd()
-    let host = Deno.env.get("HOST") ?? DEFAULT_HOST
-    let port = parseInt(Deno.env.get("PORT") ?? DEFAULT_PORT)
+    let host = DEFAULT_HOST
+    let port = parseInt(DEFAULT_PORT)
     let version = false
     let help = false
 
