@@ -12,6 +12,8 @@ class Self {
 
     /** Starts the server */
     async serve() {
+        this.startFileWatcher()
+
         const handler = (req: Request): Promise<Response> => {
             const url = new URL(req.url)
             console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`);
@@ -89,6 +91,51 @@ class Self {
             'txt': 'text/plain',
         };
         return mimeTypes[ext || ''] || 'text/plain';
+    }
+
+    private async startFileWatcher() {
+        try {
+            const watcher = Deno.watchFs(this.dir)
+            let debounceTimer: number | null = null
+
+            for await (const event of watcher) {
+                // Only watch for modify and create events
+                if (event.kind === 'modify' || event.kind === 'create') {
+                    // Filter for web files only
+                    const webFiles = event.paths.filter(path => {
+                        const ext = path.split('.').pop()?.toLowerCase()
+                        return ext && ['html', 'css', 'js', 'json'].includes(ext)
+                    })
+
+                    if (webFiles.length > 0) {
+                        // Debounce rapid file changes (100ms delay)
+                        if (debounceTimer) {
+                            clearTimeout(debounceTimer)
+                        }
+                        debounceTimer = setTimeout(() => {
+                            console.log(`\x1b[36mFile changed:\x1b[0m ${webFiles.join(', ')}`);
+                            this.onFilesChanged(webFiles);
+                        }, 100)
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("File watcher error: ", error)
+        }
+    }
+
+    private onFilesChanged(files: string[]) {
+        // For now, just log what changed
+        // In the next steps, we'll send WebSocket messages here
+        console.log(`\x1b[32m→ Ready to reload ${files.length} file(s)\x1b[0m`);
+
+        // Check if changes are CSS-only (for future smart reloading)
+        const cssOnly = files.every(file => file.endsWith('.css'));
+        if (cssOnly) {
+            console.log(`\x1b[33m→ CSS-only changes detected (future: hot-swap CSS)\x1b[0m`);
+        } else {
+            console.log(`\x1b[33m→ Full page reload needed\x1b[0m`);
+        }
     }
 
     /** Shuts down the server */
