@@ -8,14 +8,21 @@ class Self {
         private host: string,
         private port: number,
         private abortableController: AbortController = new AbortController(),
+        private wsClients: Set<WebSocket> = new Set()
     ) { }
 
     /** Starts the server */
     async serve() {
         this.startFileWatcher()
 
-        const handler = (req: Request): Promise<Response> => {
+        const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
+
+            // Handle WebSocket upgrade for hot-reload
+            if (url.pathname === "/__hot_reload__") {
+                return await this.handleWebSocketUpgrade(req)
+            }
+
             console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`);
             return this.serveStaticFile(url.pathname)
         }
@@ -126,15 +133,59 @@ class Self {
 
     private onFilesChanged(files: string[]) {
         // For now, just log what changed
-        // In the next steps, we'll send WebSocket messages here
-        console.log(`\x1b[32m→ Ready to reload ${files.length} file(s)\x1b[0m`);
+        console.log(`\x1b[32m→ Ready to reload ${files.length} file(s)\x1b[0m`)
 
         // Check if changes are CSS-only (for future smart reloading)
-        const cssOnly = files.every(file => file.endsWith('.css'));
+        const cssOnly = files.every(file => file.endsWith('.css'))
         if (cssOnly) {
-            console.log(`\x1b[33m→ CSS-only changes detected (future: hot-swap CSS)\x1b[0m`);
+            console.log(`\x1b[33m→ CSS-only changes detected (future: hot-swap CSS)\x1b[0m`)
+            this.broadcastToClients(JSON.stringify({ type: 'css-change', files }))
         } else {
             console.log(`\x1b[33m→ Full page reload needed\x1b[0m`);
+            this.broadcastToClients(JSON.stringify({ type: 'full-reload', files }))
+        }
+    }
+
+    /** Handles WebSocket upgrade requests */
+    private handleWebSocketUpgrade(req: Request): Response {
+        const { socket, response } = Deno.upgradeWebSocket(req)
+
+        socket.addEventListener('open', () => {
+            this.wsClients.add(socket)
+            console.log(`\x1b[32m→ WebSocket client connected (${this.wsClients.size} total)\x1b[0m`)
+        })
+
+        socket.addEventListener('close', () => {
+            this.wsClients.delete(socket)
+            console.log(`\x1b[91m→ WebSocket client disconnected (${this.wsClients.size} total)\x1b[0m`)
+        })
+
+        socket.addEventListener('error', (error) => {
+            this.wsClients.delete(socket)
+            console.error(`\x1b[91m→ WebSocket error:\x1b[0m`, error)
+        })
+
+        return response
+    }
+
+    private broadcastToClients(message: string) {
+        const activeClients = new Set<WebSocket>()
+
+        for (const client of this.wsClients) {
+            if (client.readyState === WebSocket.OPEN) {
+                try {
+                    client.send(message)
+                } catch (error) {
+                    console.error(`\x1b[91m→ Failed to send to client:\x1b[0m`, error)
+                    this.wsClients.delete(client)
+                }
+            }
+        }
+
+        this.wsClients = activeClients
+
+        if (activeClients.size > 0) {
+            console.log(`\x1b[36m→ Broadcasted to ${activeClients.size} client(s)\x1b[0m`)
         }
     }
 
