@@ -8,6 +8,7 @@ class Self {
         private host: string,
         private port: number,
         private abortableController: AbortController = new AbortController(),
+        private watcher: Deno.FsWatcher | null = null,
         private wsClients: Set<WebSocket> = new Set()
     ) { }
 
@@ -126,10 +127,10 @@ class Self {
 
     private async startFileWatcher() {
         try {
-            const watcher = Deno.watchFs(this.dir)
+            this.watcher = Deno.watchFs(this.dir)
             let debounceTimer: number | null = null
 
-            for await (const event of watcher) {
+            for await (const event of this.watcher) {
                 // Only watch for modify and create events
                 if (event.kind === 'modify' || event.kind === 'create') {
                     // Filter for web files only
@@ -264,6 +265,9 @@ class Self {
     /** Shuts down the server */
     shutdown() {
         console.log('Shutting down server...')
+        this.wsClients.forEach(client => client.close())
+        this.wsClients.clear()
+        this.watcher?.close()
         this.abortableController.abort()
     }
 }
