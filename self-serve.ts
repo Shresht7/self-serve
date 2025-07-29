@@ -24,8 +24,6 @@ class Self {
             signal: this.abortableController.signal,
         }, handler)
 
-        console.log(`Server started on http://${this.host}:${this.port}`)
-
         try {
             await server.finished
         } catch (error) {
