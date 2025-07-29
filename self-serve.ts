@@ -213,35 +213,50 @@ class Self {
         }
     }
 
+    /** Generates a hot-reload script to inject into the client HTML files */
     private generateHotReloadScript(): string {
         return /* HTML */`
             <script>
-                console.log('🔥 Hot reload script loaded')
+                function setupHotReload() {
+                    const socket = new WebSocket('ws://${this.host}:${this.port}/__hot_reload__')
+                    socket.addEventListener('open', () => console.log('🔥 Hot reload connected'))
+                    socket.addEventListener('message', (event) => {
+                        const data = JSON.parse(event.data)
+                        if (data.type === 'full-reload') {
+                            window.location.reload()
+                        } else if (data.type === 'css-change') {
+                            reloadCSS(data.files)
+                        }
+                        }
+                    })
+                    socket.addEventListener('close', () => console.log('🔌 Hot reload disconnected'))
+                    socket.addEventListener('error', (error) => console.error('❌ Hot reload error:', error))
+                }
 
-                const socket = new WebSocket('ws://${this.host}:${this.port}/__hot_reload__')
+                function reloadCSS(files) {
+                    const links = document.querySelectorAll('links[rel="stylesheet"]')
+                    links.forEach(link => {
+                        const href = link.getAttribute('href')
+                        if (!href) { return }
 
-                socket.addEventListener('open', () => console.log('🔗 Hot reload connected'))
+                        // Check if this CSS file was in the changed files
+                        const shouldReload = files.some(file => {
+                            const fileName = file.split('/').pop() || file
+                            return href.includes(fileName)
+                        })
 
-                socket.addEventListener('message', (event) => {
-                    const data = JSON.parse(event.data)
-                    console.log('📨 Hot reload message:', data)
+                        if (shouldReload) {
+                            const newLink = link.cloneNode()
+                            const url = new URL(href, window.location.href)
+                            url.searchParams.set('_hot_reload', Date.now().toString())
+                            newLink.href = url.toString()
+                            link.parentNode.replaceChild(newLink, link)
+                            reloadedCount++
+                        }
+                    })
+                }
 
-                    switch (data.type) {
-                        case 'connected':
-                            console.log('✅ ' + data.message)
-                            break
-                        case 'css-change':
-                            console.log('🎨 CSS files changed:', data.files)
-                            break
-                        case 'full-reload':
-                        default:
-                            console.log('🔄 Full reload needed for:', data.files)
-                            break;
-                    }
-                })
-
-                socket.addEventListener('close', () => console.log('🔌 Hot reload disconnected'))
-                socket.addEventListener('error', (error) => console.error('❌ Hot reload error:', error))
+                setupHotReload()
             </script>
         `
     }
