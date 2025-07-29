@@ -20,6 +20,12 @@ Serve the current directory on `localhost:5327`
 > [!NOTE]
 > You can type `r` and press `enter` to restart the server.
 
+To use the deno `self-serve`
+
+```
+deno run --allow-net --allow-read self-serve.ts
+```
+
 ## 📕 Reference
 
 ### `--dir`
