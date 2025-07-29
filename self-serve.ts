@@ -67,6 +67,30 @@ class Self {
             const content = await Deno.readFile(filePath)
             const mimeType = this.getMimeType(filePath)
 
+            // Inject hot-reload script into HTML files
+            if (mimeType === 'text/html') {
+                const html = new TextDecoder().decode(content)
+                const hotReloadScript = this.generateHotReloadScript()
+
+                let modifiedHtml
+                if (html.includes('</body>')) {
+                    modifiedHtml = html.replace('</body>', hotReloadScript + '</body>')
+                } else if (html.includes('</html>')) {
+                    modifiedHtml = html.replace('</html>', hotReloadScript + '</html>')
+                } else {
+                    modifiedHtml = html + hotReloadScript
+                }
+
+                const modifiedContent = new TextEncoder().encode(modifiedHtml)
+                return new Response(modifiedContent, {
+                    headers: {
+                        "Content-Type": mimeType,
+                        "Cache-Control": 'no-cache' // No cache during development to prevent stale content
+                    }
+                })
+
+            }
+
             return new Response(content, {
                 headers: {
                     "Content-Type": mimeType,
@@ -187,6 +211,39 @@ class Self {
         if (activeClients.size > 0) {
             console.log(`\x1b[36m→ Broadcasted to ${activeClients.size} client(s)\x1b[0m`)
         }
+    }
+
+    private generateHotReloadScript(): string {
+        return /* HTML */`
+            <script>
+                console.log('🔥 Hot reload script loaded')
+
+                const socket = new WebSocket('ws://${this.host}:${this.port}/__hot_reload__')
+
+                socket.addEventListener('open', () => console.log('🔗 Hot reload connected'))
+
+                socket.addEventListener('message', (event) => {
+                    const data = JSON.parse(event.data)
+                    console.log('📨 Hot reload message:', data)
+
+                    switch (data.type) {
+                        case 'connected':
+                            console.log('✅ ' + data.message)
+                            break
+                        case 'css-change':
+                            console.log('🎨 CSS files changed:', data.files)
+                            break
+                        case 'full-reload':
+                        default:
+                            console.log('🔄 Full reload needed for:', data.files)
+                            break;
+                    }
+                })
+
+                socket.addEventListener('close', () => console.log('🔌 Hot reload disconnected'))
+                socket.addEventListener('error', (error) => console.error('❌ Hot reload error:', error))
+            </script>
+        `
     }
 
     /** Shuts down the server */
