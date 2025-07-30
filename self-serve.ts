@@ -3,6 +3,7 @@ import { contentType } from "jsr:@std/media-types"
 
 // Modules
 import * as cli from './src/cli.ts'
+import * as template from './src/templates/index.ts'
 
 // ----
 // SELF
@@ -74,7 +75,7 @@ class Self {
             }
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                return new Response(this.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+                return new Response(template.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             }
             console.error('Error resolving path: ', error)
             return new Response('Internal Server Error', { status: 500 })
@@ -89,7 +90,7 @@ class Self {
                     return await this.serveFile(indexPath)
                 } catch (error) {
                     if (error instanceof Deno.errors.NotFound) {
-                        const directoryListing = await this.generateDirectoryListingPage(decodedPathName, resolvedPath)
+                        const directoryListing = await template.generateDirectoryListingPage(decodedPathName, resolvedPath)
                         return new Response(directoryListing, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
                     }
                     throw error
@@ -99,7 +100,7 @@ class Self {
             return await this.serveFile(resolvedPath)
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                return new Response(this.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+                return new Response(template.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             } else if (error instanceof Deno.errors.PermissionDenied) {
                 return new Response('Forbidden', { status: 403 })
             }
@@ -300,90 +301,6 @@ class Self {
 
                 setupHotReload()
             </script>
-        `
-    }
-
-    /** Generates the HTML for a directory listing page */
-    private async generateDirectoryListingPage(pathName: string, resolvedPath: string): Promise<string> {
-        let fileList = ''
-        const entries = []
-        for await (const entry of Deno.readDir(resolvedPath)) {
-            entries.push(entry)
-        }
-        // Sort entries: directories first, then files, all alphabetically
-        entries.sort((a, b) => {
-            if (a.isDirectory && !b.isDirectory) return -1
-            if (!a.isDirectory && b.isDirectory) return 1
-            return a.name.localeCompare(b.name)
-        })
-
-        for (const entry of entries) {
-            const slash = entry.isDirectory ? '/' : ''
-            const href = `${pathName.endsWith('/') ? '' : pathName + '/'}${entry.name}${slash}`
-            fileList += `<li><a href="${href}">${entry.name}${slash}</a></li>`
-        }
-
-        return /* HTML */`
-                <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Index of ${pathName}</title>
-                    <style>
-                        :root { color-scheme: light dark; }
-                        *, *:before, *:after { box-sizing: border-box; margin: 0; padding: 0; }
-                        body { font-family: monospace; padding: 20px; color: #333; display: flex; flex-direction: column; gap: 1rem; }
-                        h1 { border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-                        ul { list-style: none; padding: 0; }
-                        li { padding: 5px 0; }
-                        a { text-decoration: none; color: #007bff; }
-                        a:hover { text-decoration: underline; }
-                        @media (prefers-color-scheme: dark) {
-                            h1 { border-bottom: 1px solid #777; }
-                            body { color: #eee; background-color: #333 }
-                            a { color: #eee; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>${pathName}</h1>
-                    <ul>
-                        ${pathName !== '/' ? '<li><a href="..">../</a></li>' : ''}
-                        ${fileList}
-                    </ul>
-                </body>
-                </html>
-            `
-    }
-
-    /** Generates the HTML for a 404 Not Found page */
-    private generateNotFoundPage(path: string): string {
-        return /* HTML */`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>404 Not Found</title>
-                <style>
-                    :root { color-scheme: light dark; }
-                    *, *:before, *:after { box-sizing: border-box; margin: 0; padding: 0; }
-                    body { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: sans-serif; text-align: center; color: #333; }
-                    h1 { font-size: 120px; margin: 0; font-weight: 900; }
-                    p { font-size: 24px; }
-                    code { background: #eee; padding: 2px 6px; border-radius: 4px; }
-                    @media (prefers-color-scheme: dark) {
-                        body { color: #eee; background-color: #333 }
-                        code { background: #777; padding: 2px 6px; border-radius: 4px; }
-                    }
-                </style>
-            </head>
-            <body>
-                <h1>404</h1>
-                <p>Page Not Found: <code>${path}</code></p>
-            </body>
-            </html>
         `
     }
 
