@@ -340,7 +340,7 @@ class Self {
     /** Shuts down the server and performs the necessary cleanup operation */
     shutdown() {
         console.log('Shutting down server...')
-        this.wsClients.forEach(client => client.close())
+        this.wsClients.forEach(client => client.readyState === WebSocket.OPEN && client.close())
         this.wsClients.clear()
         this.watcher?.close()
         this.abortableController.abort()
