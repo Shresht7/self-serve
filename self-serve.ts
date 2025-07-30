@@ -29,7 +29,7 @@ class Self {
             }
 
             console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
-            return await this.serveStaticFile(url.pathname)
+            return await this.serveStatic(url.pathname)
         }
 
         const server = Deno.serve({
@@ -53,75 +53,82 @@ class Self {
         return req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
     }
 
-    /** Function to serve static files */
-    private async serveStaticFile(pathName: string): Promise<Response> {
+    /** Function to serve static files and directory listings */
+    private async serveStatic(pathName: string): Promise<Response> {
         // Normalize path and prevent directory traversal
-        let resolvedPath = this.dir + (pathName.endsWith('/') ? pathName + 'index.html' : pathName)
-        if (pathName === '/') resolvedPath = this.dir + '/index.html'
+        const decodedPathName = decodeURIComponent(pathName)
+        const resolvedPath = this.dir + decodedPathName
 
         try {
             const realBasePath = await Deno.realPath(this.dir)
             const realResolvedPath = await Deno.realPath(resolvedPath)
 
             if (!realResolvedPath.startsWith(realBasePath) || resolvedPath.includes('\0')) {
-                console.warn(`\x1b[91m→ Blocked suspicious path: ${pathName}\x1b[0m`)
+                console.warn(`\x1b[91m→ Blocked suspicious path: ${decodedPathName}\x1b[0m`)
                 return new Response('Forbidden', { status: 403 })
             }
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                return new Response(this.generateNotFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+                return new Response(this.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             }
             console.error('Error resolving path: ', error)
             return new Response('Internal Server Error', { status: 500 })
         }
 
-        // Serve the file or directory
         try {
             const fileInfo = await Deno.stat(resolvedPath)
-
             if (fileInfo.isDirectory) {
-                // TODO: Directory listing (to be implemented)
-                return new Response("Directory listing not supported yet", { status: 403 })
-            }
-
-            const content = await Deno.readFile(resolvedPath)
-            const mimeType = contentType(resolvedPath.split('.').pop() || '') || 'application/octet-stream'
-
-            // Inject hot-reload script for HTML files
-            if (mimeType === 'text/html; charset=utf-8') {
-                const html = new TextDecoder().decode(content)
-                const hotReloadScript = this.generateHotReloadScript()
-                const modifiedHtml = html.replace(/<\/body>/i, `${hotReloadScript}\n<\/body>`)
-                return new Response(modifiedHtml, {
-                    headers: {
-                        "Content-Type": mimeType,
-                        "Cache-Control": 'no-cache, no-store, must-revalidate', // No cache during development to prevent stale content
-                        "Pragma": "no-cache",
-                        "Expires": "0"
+                const indexPath = resolvedPath + (resolvedPath.endsWith('/') ? '' : '/') + 'index.html'
+                try {
+                    await Deno.stat(indexPath);
+                    return await this.serveFile(indexPath)
+                } catch (error) {
+                    if (error instanceof Deno.errors.NotFound) {
+                        const directoryListing = await this.generateDirectoryListingPage(decodedPathName, resolvedPath)
+                        return new Response(directoryListing, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
                     }
-                })
+                    throw error
+                }
             }
 
-            // Serve any other static assets
-            const headers: Record<string, string> = {
-                'Content-Type': mimeType
-            }
-
-            // Cache static assets but allow revalidation during development
-            if (mimeType.startsWith('image/') || mimeType === 'application/javascript') {
-                headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
-            }
-            return new Response(content, { headers })
-
+            return await this.serveFile(resolvedPath)
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                return new Response(this.generateNotFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+                return new Response(this.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             } else if (error instanceof Deno.errors.PermissionDenied) {
                 return new Response('Forbidden', { status: 403 })
             }
             console.error('Error serving file: ', error)
             return new Response('Internal Server Error', { status: 500 })
         }
+    }
+
+    /** Helper function to serve a single file */
+    private async serveFile(filePath: string): Promise<Response> {
+        const content = await Deno.readFile(filePath)
+        const mimeType = contentType(filePath.split('.').pop() || '') || 'application/octet-stream'
+
+        if (mimeType === 'text/html; charset=utf-8') {
+            const html = new TextDecoder().decode(content)
+            const hotReloadScript = this.generateHotReloadScript();
+            const modifiedHtml = html.replace(/<\/body>/i, `${hotReloadScript}<\/body>`)
+            return new Response(modifiedHtml, {
+                headers: {
+                    "Content-Type": mimeType,
+                    "Cache-Control": 'no-cache, no-store, must-revalidate',
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+            })
+        }
+
+        const headers: Record<string, string> = {
+            'Content-Type': mimeType
+        };
+        if (mimeType.startsWith('image/') || mimeType === 'application/javascript') {
+            headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
+        }
+        return new Response(content, { headers })
     }
 
 
@@ -282,8 +289,55 @@ class Self {
         `
     }
 
+    /** Generates the HTML for a directory listing page */
+    private async generateDirectoryListingPage(pathName: string, resolvedPath: string): Promise<string> {
+        let fileList = ''
+        const entries = []
+        for await (const entry of Deno.readDir(resolvedPath)) {
+            entries.push(entry)
+        }
+        // Sort entries: directories first, then files, all alphabetically
+        entries.sort((a, b) => {
+            if (a.isDirectory && !b.isDirectory) return -1
+            if (!a.isDirectory && b.isDirectory) return 1
+            return a.name.localeCompare(b.name)
+        })
+
+        for (const entry of entries) {
+            const slash = entry.isDirectory ? '/' : ''
+            const href = `${pathName.endsWith('/') ? '' : pathName + '/'}${entry.name}${slash}`
+            fileList += `<li><a href="${href}">${entry.name}${slash}</a></li>`
+        }
+
+        return /* HTML */`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Index of ${pathName}</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 20px; color: #333; }
+                        h1 { border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+                        ul { list-style: none; padding: 0; }
+                        li { padding: 5px 0; }
+                        a { text-decoration: none; color: #007bff; }
+                        a:hover { text-decoration: underline; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Index of ${pathName}</h1>
+                    <ul>
+                        ${pathName !== '/' ? '<li><a href="..">../</a></li>' : ''}
+                        ${fileList}
+                    </ul>
+                </body>
+                </html>
+            `
+    }
+
     /** Generates the HTML for a 404 Not Found page */
-    private generateNotFoundPage(): string {
+    private generateNotFoundPage(path: string): string {
         return /* HTML */`
             <!DOCTYPE html>
             <html lang="en">
@@ -295,11 +349,12 @@ class Self {
                     body { font-family: sans-serif; text-align: center; padding: 40px; color: #333; }
                     h1 { font-size: 120px; margin: 0; font-weight: 900; }
                     p { font-size: 24px; }
+                    code { background: #eee; padding: 2px 6px; border-radius: 4px; }
                 </style>
             </head>
             <body>
                 <h1>404</h1>
-                <p>Page Not Found</p>
+                <p>Page Not Found: <code>${path}</code></p>
             </body>
             </html>
         `
