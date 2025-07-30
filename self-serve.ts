@@ -452,7 +452,7 @@ async function main() {
     // Initialize the self-server
     const self = new Self(args.dir, args.host, args.port)
 
-    console.log(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
+    console.log(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m serving \x1b[33m${args.dir}\x1b[0m`);
 
     // Handle graceful shutdown
     Deno.addSignalListener("SIGINT", () => {
