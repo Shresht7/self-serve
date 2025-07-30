@@ -329,16 +329,23 @@ class Self {
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Index of ${pathName}</title>
                     <style>
-                        body { font-family: sans-serif; padding: 20px; color: #333; }
+                        :root { color-scheme: light dark; }
+                        *, *:before, *:after { box-sizing: border-box; margin: 0; padding: 0; }
+                        body { font-family: monospace; padding: 20px; color: #333; display: flex; flex-direction: column; gap: 1rem; }
                         h1 { border-bottom: 1px solid #ccc; padding-bottom: 10px; }
                         ul { list-style: none; padding: 0; }
                         li { padding: 5px 0; }
                         a { text-decoration: none; color: #007bff; }
                         a:hover { text-decoration: underline; }
+                        @media (prefers-color-scheme: dark) {
+                            h1 { border-bottom: 1px solid #777; }
+                            body { color: #eee; background-color: #333 }
+                            a { color: #eee; }
+                        }
                     </style>
                 </head>
                 <body>
-                    <h1>Index of ${pathName}</h1>
+                    <h1>${pathName}</h1>
                     <ul>
                         ${pathName !== '/' ? '<li><a href="..">../</a></li>' : ''}
                         ${fileList}
