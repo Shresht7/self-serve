@@ -50,7 +50,7 @@ class Self {
 
     /** Helper function to get the IP Address of the client */
     private getClientIP(req: Request): string {
-        return req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+        return req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1'
     }
 
     /** Function to serve static files and directory listings */
