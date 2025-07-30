@@ -21,11 +21,11 @@ class Self {
 
             // Handle WebSocket upgrade for hot-reload
             if (url.pathname === "/__hot_reload__") {
-                return await this.handleWebSocketUpgrade(req)
+                return this.handleWebSocketUpgrade(req)
             }
 
             console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`);
-            return this.serveStaticFile(url.pathname)
+            return await this.serveStaticFile(url.pathname)
         }
 
         const server = Deno.serve({
@@ -194,8 +194,6 @@ class Self {
     }
 
     private broadcastToClients(message: string) {
-        const activeClients = new Set<WebSocket>()
-
         for (const client of this.wsClients) {
             if (client.readyState === WebSocket.OPEN) {
                 try {
@@ -204,13 +202,9 @@ class Self {
                     console.error(`\x1b[91m→ Failed to send to client:\x1b[0m`, error)
                     this.wsClients.delete(client)
                 }
+            } else {
+                this.wsClients.delete(client)
             }
-        }
-
-        this.wsClients = activeClients
-
-        if (activeClients.size > 0) {
-            console.log(`\x1b[36m→ Broadcasted to ${activeClients.size} client(s)\x1b[0m`)
         }
     }
 
@@ -228,22 +222,21 @@ class Self {
                         } else if (data.type === 'css-change') {
                             reloadCSS(data.files)
                         }
-                        }
                     })
                     socket.addEventListener('close', () => console.log('🔌 Hot reload disconnected'))
                     socket.addEventListener('error', (error) => console.error('❌ Hot reload error:', error))
                 }
 
                 function reloadCSS(files) {
-                    const links = document.querySelectorAll('links[rel="stylesheet"]')
+                    const links = document.querySelectorAll('link[rel="stylesheet"]')
                     links.forEach(link => {
                         const href = link.getAttribute('href')
                         if (!href) { return }
 
                         // Check if this CSS file was in the changed files
                         const shouldReload = files.some(file => {
-                            const fileName = file.split('/').pop() || file
-                            return href.includes(fileName)
+                            const fileName = file.split(/[\\\\/]+/g).pop() || file
+                            return href.includes(fileName) || fileName.includes(href)
                         })
 
                         if (shouldReload) {
@@ -251,8 +244,12 @@ class Self {
                             const url = new URL(href, window.location.href)
                             url.searchParams.set('_hot_reload', Date.now().toString())
                             newLink.href = url.toString()
-                            link.parentNode.replaceChild(newLink, link)
-                            reloadedCount++
+
+                            // Replace the old link with the new one
+                            newLink.addEventListener('load', () => link.remove())
+                            newLink.addEventListener('error', () => link.remove())
+
+                            link.parentNode.insertBefore(newLink, link.nextSibling)
                         }
                     })
                 }
