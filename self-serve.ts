@@ -362,8 +362,8 @@ self-serve is a super simple HTTP static file server
 
 Options:
   -d, --dir     Directory to serve (default: current directory)
-  -a, --host    Host address to listen on (default: localhost)
-  -p, --port    Port to listen on (default: 5327)
+  -a, --host    Host address to listen on (default: ${DEFAULT_HOST})
+  -p, --port    Port to listen on (default: ${DEFAULT_PORT})
  
   -h, --help    Show this help message
   -v, --version Show version number
@@ -389,6 +389,10 @@ function parseArgs(args: string[]): { dir: string, host: string, port: number, v
             host = args.at(++i) ?? host
         } else if (arg === "-p" || arg === "--port") {
             port = parseInt(args.at(++i) ?? port.toString())
+            if (isNaN(port) || port < 1 || port > 65535) {
+                console.error(`Invalid port number: ${port}`)
+                Deno.exit(1)
+            }
         }
     }
 
