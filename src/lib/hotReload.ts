@@ -1,0 +1,47 @@
+export function generateHotReloadScript(host: string, port: number) {
+    return /* JavaScript */ `
+        function setupHotReload() {
+            const socket = new WebSocket('ws://${host}:${port}/__hot_reload__')
+            socket.addEventListener('open', () => console.log('🔥 Hot-Reload WebSocket Connection Established'))
+            socket.addEventListener('message', (event) => {
+                const data = JSON.parse(event.data)
+                if (data.type === 'full-reload') {
+                    window.location.reload()
+                } else if (data.type === 'css-change') {
+                    reloadCSS(data.files)
+                }
+            })
+            socket.addEventListener('close', () => console.log('Hot-Reload WebSocket Connection Closed'))
+            socket.addEventListener('error', (error) => console.error('Hot-Reload Error: ', error))
+        }
+
+        function reloadCSS(files) {
+            const links = document.querySelectorAll('link[rel="stylesheet"]') // Get all stylesheet links in the document
+            links.forEach(link => {
+                const href = link.getAttribute('href')
+                if (!href) { return }
+
+                // Check if this CSS file was in the changed files, and if it was, hot-swap the CSS file
+                const shouldReload = files.some(file => {
+                    const fileName = file.split(/[\\\\/]+/g).pop() || file
+                    const linkFileName = href.split(/[\\\\/]+/g).pop() || href
+                    return linkFileName.includes(fileName) || fileName.includes(href)
+                })
+
+                if (shouldReload) {
+                    const newLink = link.cloneNode()
+                    const url = new URL(href, window.location.origin)
+                    url.searchParams.set('__hot_reload__', Date.now().toString())
+                    newLink.href = url.toString()
+
+                    // Replace the old link with the new one
+                    newLink.addEventListener('load', () => link.remove())
+                    newLink.addEventListener('error', () => link.remove())
+                    link.parentNode.insertBefore(newLink, link.nextSibling)
+                }
+            })
+        }
+
+        setupHotReload()            
+    `
+}
