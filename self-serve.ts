@@ -65,7 +65,20 @@ class Self {
             pathName += 'index.html'
         }
 
+        // Normalize path and ensure it's within the served directory
         const filePath = this.dir + pathName
+
+        try {
+            // Resolve real path to prevent symlink access
+            const realPath = await Deno.realPath(filePath)
+            const realDir = await Deno.realPath(this.dir)
+            if (!realPath.startsWith(realDir)) {
+                console.warn(`\x1b[91m→ Bocked path outside served directory: ${pathName}\x1b[0m`)
+                return new Response('Forbidden', { status: 403 })
+            }
+        } catch {
+            // If realPath fails, continue with original path, the file might not exist yet
+        }
 
         try {
             const fileInfo = await Deno.stat(filePath)
