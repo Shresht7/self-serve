@@ -69,7 +69,7 @@ class Self {
             }
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                return new Response('Not Found', { status: 404 });
+                return new Response(this.generateNotFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             }
             console.error('Error resolving path: ', error);
             return new Response('Internal Server Error', { status: 500 });
@@ -115,7 +115,7 @@ class Self {
 
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                return new Response('Not Found', { status: 404 });
+                return new Response(this.generateNotFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             } else if (error instanceof Deno.errors.PermissionDenied) {
                 return new Response('Forbidden', { status: 403 });
             }
@@ -280,6 +280,29 @@ class Self {
                 setupHotReload()
             </script>
         `
+    }
+
+    /** Generates the HTML for a 404 Not Found page */
+    private generateNotFoundPage(): string {
+        return /* HTML */`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>404 Not Found</title>
+                <style>
+                    body { font-family: sans-serif; text-align: center; padding: 40px; color: #333; }
+                    h1 { font-size: 120px; margin: 0; font-weight: 900; }
+                    p { font-size: 24px; }
+                </style>
+            </head>
+            <body>
+                <h1>404</h1>
+                <p>Page Not Found</p>
+            </body>
+            </html>
+        `;
     }
 
     /** Shuts down the server and performs the necessary cleanup operation */
