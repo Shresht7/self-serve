@@ -14,7 +14,7 @@ class Self {
 
     /** Starts the server */
     async serve() {
-        this.startFileWatcher()
+        this.startFileWatcher()  // Start the File Watcher
 
         const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
@@ -51,6 +51,12 @@ class Self {
 
     /** Function to serve static files */
     private async serveStaticFile(pathName: string): Promise<Response> {
+        // Security: Prevent directory traversal attacks
+        if (pathName.includes('..') || pathName.includes('\0')) {
+            console.warn(`\x1b[91m→ Bocked suspicious path: ${pathName}\x1b[0m`)
+            return new Response('Forbidden', { status: 403 })
+        }
+
         // Default to index.html for directory requests
         if (pathName.endsWith('/')) {
             pathName += 'index.html'
