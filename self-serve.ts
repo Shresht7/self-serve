@@ -99,14 +99,14 @@ class Self {
 
             // Inject hot-reload script into HTML files
             if (mimeType === 'text/html') {
-                const html = new TextDecoder().decode(content)
+                const html = new TextDecoder().decode(content).toLowerCase()
                 const hotReloadScript = this.generateHotReloadScript()
 
                 let modifiedHtml
                 if (html.includes('</body>')) {
-                    modifiedHtml = html.replace('</body>', hotReloadScript + '</body>')
+                    modifiedHtml = html.replace(/<\/body>/i, hotReloadScript + '\n</body>')
                 } else if (html.includes('</html>')) {
-                    modifiedHtml = html.replace('</html>', hotReloadScript + '</html>')
+                    modifiedHtml = html.replace(/<\/html>/i, hotReloadScript + '\n</html>')
                 } else {
                     modifiedHtml = html + hotReloadScript
                 }
@@ -115,20 +115,28 @@ class Self {
                 return new Response(modifiedContent, {
                     headers: {
                         "Content-Type": mimeType,
-                        "Cache-Control": 'no-cache' // No cache during development to prevent stale content
+                        "Cache-Control": 'no-cache, no-store, must-revalidate', // No cache during development to prevent stale content
+                        "Pragma": "no-cache",
+                        "Expires": "0"
                     }
                 })
-
             }
 
-            return new Response(content, {
-                headers: {
-                    "Content-Type": mimeType,
-                }
-            })
+            // Add appropriate caching headers for static assets
+            const headers: Record<string, string> = {
+                'Content-Type': mimeType
+            }
+
+            // Cache static assets but allow revalidation during development
+            if (mimeType.startsWith('image/') || mimeType === 'application/javascript') {
+                headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
+            }
+            return new Response(content, { headers })
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
                 return new Response('Not Found', { status: 404 })
+            } else if (error instanceof Deno.errors.PermissionDenied) {
+                return new Response('Forbidden', { status: 403 })
             }
             console.error('Error serving file: ', error)
             return new Response('Internal Server Error', { status: 500 })
