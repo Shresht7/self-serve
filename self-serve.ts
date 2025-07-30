@@ -1,4 +1,5 @@
 // Deno Standard Library
+import { parseArgs } from "jsr:@std/cli"
 import { contentType } from "jsr:@std/media-types"
 
 // ----
@@ -337,39 +338,37 @@ Options:
 `
 
 /** Parses command-line arguments and returns an object with the parsed values */
-function parseArgs(args: string[]): { dir: string, host: string, port: number, version: boolean, help: boolean } {
-    let dir = Deno.cwd()
-    let host = DEFAULT_HOST
-    let port = parseInt(DEFAULT_PORT)
-    let version = false
-    let help = false
+function parseCommandLineArguments(args: string[]): { dir: string, host: string, port: number, version: boolean, help: boolean } {
+    const flags = parseArgs(args, {
+        string: ["dir", "host", "port"],
+        boolean: ["help", "version"],
+        alias: {
+            "help": "h",
+            "version": "v",
+            "dir": "d",
+            "host": "a",
+            "port": "p",
+        },
+        default: {
+            dir: Deno.cwd(),
+            host: DEFAULT_HOST,
+            port: DEFAULT_PORT,
+        },
+    });
 
-    for (let i = 0; i < args.length; i++) {
-        const arg = args[i]
-        if (arg === '-h' || arg === '--help') {
-            help = true
-        } else if (arg === "-v" || arg === "--version") {
-            version = true
-        } else if (arg === "-d" || arg === "--dir") {
-            dir = args.at(++i) ?? dir
-        } else if (arg === "-a" || arg === "--host") {
-            host = args.at(++i) ?? host
-        } else if (arg === "-p" || arg === "--port") {
-            port = parseInt(args.at(++i) ?? port.toString())
-            if (isNaN(port) || port < 1 || port > 65535) {
-                console.error(`Invalid port number: ${port}`)
-                Deno.exit(1)
-            }
-        }
+    const port = Number(flags.port);
+    if (isNaN(port) || port < 1 || port > 65535) {
+        console.error(`Invalid port number: ${flags.port}`);
+        Deno.exit(1);
     }
 
-    return { dir, host, port, version, help }
+    return { ...flags, port }
 }
 
 /** The main entrypoint of the application */
 async function main() {
     // Parse the command-line arguments
-    const args = parseArgs(Deno.args)
+    const args = parseCommandLineArguments(Deno.args)
 
     // Show the help message if `-h` or `--help` command-line option was passed in
     if (args.help) {
