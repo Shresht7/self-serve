@@ -14,7 +14,10 @@ class Self {
         private abortableController: AbortController = new AbortController(),
         private watcher: Deno.FsWatcher | null = null,
         private wsClients: Set<WebSocket> = new Set()
-    ) { }
+    ) {
+        // Handle graceful shutdown
+        Deno.addSignalListener("SIGINT", () => this.shutdown())
+    }
 
     /** Starts the server */
     async serve() {
@@ -439,25 +442,20 @@ async function main() {
 
     // Show the help message if `-h` or `--help` command-line option was passed in
     if (args.help) {
-        console.log(HELP_MESSAGE)
+        console.info(HELP_MESSAGE)
         return Deno.exit(0)
     }
 
     // Show the version number if `-v` or `--version` command-line option was passed in
     if (args.version) {
-        console.log(VERSION)
+        console.info(VERSION)
         return Deno.exit(0)
     }
 
-    // Initialize the self-server
+    // Initialize the self server
     const self = new Self(args.dir, args.host, args.port)
 
-    console.log(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m serving \x1b[33m${args.dir}\x1b[0m`);
-
-    // Handle graceful shutdown
-    Deno.addSignalListener("SIGINT", () => {
-        self.shutdown()
-    })
+    console.info(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m serving \x1b[33m${args.dir}\x1b[0m`);
 
     // Self Serve
     try {
@@ -466,10 +464,11 @@ async function main() {
         console.error("Failed to serve files: ", error)
         Deno.exit(1)
     }
-    console.log('Server shutdown')
+    console.info('Server shutdown')
 }
 
-// This file is being run directly as the main program
+// Call the `main` function if this file is being run directly
+// as the main program. (as opposed to being imported in a script)
 if (import.meta.main) {
     main()
 }
