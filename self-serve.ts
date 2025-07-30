@@ -58,6 +58,9 @@ class Self {
         }
 
         // Default to index.html for directory requests
+        if (pathName === "") {
+            pathName += '/'
+        }
         if (pathName.endsWith('/')) {
             pathName += 'index.html'
         }
