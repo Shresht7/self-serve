@@ -155,7 +155,7 @@ class Self {
                     // Filter for web files only
                     const webFiles = event.paths.filter(path => {
                         const ext = path.split('.').pop()?.toLowerCase()
-                        return ext && ['html', 'css', 'js', 'json'].includes(ext)
+                        return ext && ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg'].includes(ext)
                     })
 
                     if (webFiles.length > 0) {
