@@ -55,95 +55,72 @@ class Self {
 
     /** Function to serve static files */
     private async serveStaticFile(pathName: string): Promise<Response> {
-        // Security: Prevent directory traversal attacks
-        if (pathName.includes('..') || pathName.includes('\0')) {
-            console.warn(`\x1b[91m→ Bocked suspicious path: ${pathName}\x1b[0m`)
-            return new Response('Forbidden', { status: 403 })
-        }
-
-        // Default to index.html for directory requests
-        if (pathName === "") {
-            pathName += '/'
-        }
-        if (pathName.endsWith('/')) {
-            pathName += 'index.html'
-        }
-
-        // Normalize path and ensure it's within the served directory
-        const filePath = this.dir + pathName
+        // Normalize path and prevent directory traversal
+        let resolvedPath = this.dir + (pathName.endsWith('/') ? pathName + 'index.html' : pathName);
+        if (pathName === '/') resolvedPath = this.dir + '/index.html';
 
         try {
-            // Resolve real path to prevent symlink access
-            const realPath = await Deno.realPath(filePath)
-            const realDir = await Deno.realPath(this.dir)
-            if (!realPath.startsWith(realDir)) {
-                console.warn(`\x1b[91m→ Bocked path outside served directory: ${pathName}\x1b[0m`)
-                return new Response('Forbidden', { status: 403 })
+            const realBasePath = await Deno.realPath(this.dir);
+            const realResolvedPath = await Deno.realPath(resolvedPath);
+
+            if (!realResolvedPath.startsWith(realBasePath) || resolvedPath.includes('\0')) {
+                console.warn(`\x1b[91m→ Blocked suspicious path: ${pathName}\x1b[0m`);
+                return new Response('Forbidden', { status: 403 });
             }
-        } catch {
-            // If realPath fails, continue with original path, the file might not exist yet
+        } catch (error) {
+            if (error instanceof Deno.errors.NotFound) {
+                return new Response('Not Found', { status: 404 });
+            }
+            console.error('Error resolving path: ', error);
+            return new Response('Internal Server Error', { status: 500 });
         }
 
+        // Serve the file or directory
         try {
-            const fileInfo = await Deno.stat(filePath)
+            const fileInfo = await Deno.stat(resolvedPath);
 
             if (fileInfo.isDirectory) {
-                // Try to serve index.html from the directory
-                const indexPath = filePath + '/index.html'
-                try {
-                    await Deno.stat(indexPath)
-                    return await this.serveStaticFile(indexPath)
-                } catch {
-                    return new Response("Directory listing not supported", { status: 403 })
-                }
+                // TODO: Directory listing (to be implemented)
+                return new Response("Directory listing not supported yet", { status: 403 });
             }
 
-            const content = await Deno.readFile(filePath)
-            const mimeType = contentType(filePath.split('.').pop() || '') || 'application/octet-stream';
+            const content = await Deno.readFile(resolvedPath);
+            const mimeType = contentType(resolvedPath.split('.').pop() || '') || 'application/octet-stream';
 
-            // Inject hot-reload script into HTML files
-            if (mimeType === 'text/html') {
-                const html = new TextDecoder().decode(content).toLowerCase()
-                const hotReloadScript = this.generateHotReloadScript()
-
-                let modifiedHtml
-                if (html.includes('</body>')) {
-                    modifiedHtml = html.replace(/<\/body>/i, hotReloadScript + '\n</body>')
-                } else if (html.includes('</html>')) {
-                    modifiedHtml = html.replace(/<\/html>/i, hotReloadScript + '\n</html>')
-                } else {
-                    modifiedHtml = html + hotReloadScript
-                }
-
-                const modifiedContent = new TextEncoder().encode(modifiedHtml)
-                return new Response(modifiedContent, {
+            // Inject hot-reload script for HTML files
+            if (mimeType === 'text/html; charset=utf-8') {
+                const html = new TextDecoder().decode(content);
+                const hotReloadScript = this.generateHotReloadScript();
+                const modifiedHtml = html.replace(/<\/body>/i, `${hotReloadScript}\n<\/body>`);
+                return new Response(modifiedHtml, {
                     headers: {
                         "Content-Type": mimeType,
                         "Cache-Control": 'no-cache, no-store, must-revalidate', // No cache during development to prevent stale content
                         "Pragma": "no-cache",
                         "Expires": "0"
                     }
-                })
+                });
             }
 
-            // Add appropriate caching headers for static assets
+            // Serve any other static assets
             const headers: Record<string, string> = {
                 'Content-Type': mimeType
             }
 
             // Cache static assets but allow revalidation during development
             if (mimeType.startsWith('image/') || mimeType === 'application/javascript') {
-                headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
+                headers['Cache-Control'] = 'public, max-age=0, must-revalidate';
             }
-            return new Response(content, { headers })
+            return new Response(content, { headers });
+
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                return new Response('Not Found', { status: 404 })
+                return new Response('Not Found', { status: 404 });
             } else if (error instanceof Deno.errors.PermissionDenied) {
-                return new Response('Forbidden', { status: 403 })
+                return new Response('Forbidden', { status: 403 });
             }
-            console.error('Error serving file: ', error)
-            return new Response('Internal Server Error', { status: 500 })
+            console.error('Error serving file: ', error);
+            return new Response('Internal Server Error', { status: 500 });
         }
     }
 
