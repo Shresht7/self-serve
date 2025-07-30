@@ -125,12 +125,31 @@ class Self {
         return mimeTypes[ext || ''] || 'text/plain';
     }
 
+    /** Starts the file-watcher to monitor changes in the served directory */
     private async startFileWatcher() {
         try {
+            // Check if the directory exists and is readable
+            const dirInfo = await Deno.stat(this.dir)
+            if (!dirInfo || !dirInfo.isDirectory) {
+                console.error(`${this.dir} is not a directory`)
+                return
+            }
+
             this.watcher = Deno.watchFs(this.dir)
             let debounceTimer: number | null = null
+            let isShuttingDown = false
+
+            // Handle graceful shutdown
+            this.abortableController.signal.addEventListener('abort', () => {
+                isShuttingDown = true
+                if (debounceTimer) {
+                    clearTimeout(debounceTimer)
+                }
+            })
 
             for await (const event of this.watcher) {
+                if (isShuttingDown) { break } // Stop listening for events when shutting down
+
                 // Only watch for modify and create events
                 if (event.kind === 'modify' || event.kind === 'create') {
                     // Filter for web files only
@@ -152,21 +171,23 @@ class Self {
                 }
             }
         } catch (error) {
-            console.error("File watcher error: ", error)
+            if (error instanceof Deno.errors.NotFound) {
+                console.error(`Directory not found: ${this.dir}`)
+            } else if (error instanceof Deno.errors.PermissionDenied) {
+                console.error(`Permission denied: ${this.dir}`)
+            } else {
+                console.error('Error watching files: ', error)
+            }
         }
     }
 
+    /** Callback function when files are changed in the served directory */
     private onFilesChanged(files: string[]) {
-        // For now, just log what changed
-        console.log(`\x1b[32m→ Ready to reload ${files.length} file(s)\x1b[0m`)
-
-        // Check if changes are CSS-only (for future smart reloading)
+        // Check if changes are CSS-only for hot-swap reloading
         const cssOnly = files.every(file => file.endsWith('.css'))
         if (cssOnly) {
-            console.log(`\x1b[33m→ CSS-only changes detected (future: hot-swap CSS)\x1b[0m`)
             this.broadcastToClients(JSON.stringify({ type: 'css-change', files }))
         } else {
-            console.log(`\x1b[33m→ Full page reload needed\x1b[0m`);
             this.broadcastToClients(JSON.stringify({ type: 'full-reload', files }))
         }
     }
@@ -182,7 +203,7 @@ class Self {
 
         socket.addEventListener('close', () => {
             this.wsClients.delete(socket)
-            console.log(`\x1b[91m→ WebSocket client disconnected (${this.wsClients.size} total)\x1b[0m`)
+            console.log(`\x1b[91m→ WebSocket client disconnected (${this.wsClients.size} remaining)\x1b[0m`)
         })
 
         socket.addEventListener('error', (error) => {
@@ -193,6 +214,7 @@ class Self {
         return response
     }
 
+    /** Broadcasts a message to all connected WebSocket clients */
     private broadcastToClients(message: string) {
         for (const client of this.wsClients) {
             if (client.readyState === WebSocket.OPEN) {
@@ -214,7 +236,7 @@ class Self {
             <script>
                 function setupHotReload() {
                     const socket = new WebSocket('ws://${this.host}:${this.port}/__hot_reload__')
-                    socket.addEventListener('open', () => console.log('🔥 Hot reload connected'))
+                    socket.addEventListener('open', () => console.log('🔥 Hot-Reload WebSocket Connection Established'))
                     socket.addEventListener('message', (event) => {
                         const data = JSON.parse(event.data)
                         if (data.type === 'full-reload') {
@@ -223,32 +245,32 @@ class Self {
                             reloadCSS(data.files)
                         }
                     })
-                    socket.addEventListener('close', () => console.log('🔌 Hot reload disconnected'))
-                    socket.addEventListener('error', (error) => console.error('❌ Hot reload error:', error))
+                    socket.addEventListener('close', () => console.log('Hot-Reload WebSocket Connection Closed'))
+                    socket.addEventListener('error', (error) => console.error('Hot-Reload Error: ', error))
                 }
 
                 function reloadCSS(files) {
-                    const links = document.querySelectorAll('link[rel="stylesheet"]')
+                    const links = document.querySelectorAll('link[rel="stylesheet"]') // Get all stylesheet links in the document
                     links.forEach(link => {
                         const href = link.getAttribute('href')
                         if (!href) { return }
 
-                        // Check if this CSS file was in the changed files
+                        // Check if this CSS file was in the changed files, and if it was, hot-swap the CSS file
                         const shouldReload = files.some(file => {
                             const fileName = file.split(/[\\\\/]+/g).pop() || file
-                            return href.includes(fileName) || fileName.includes(href)
+                            const linkFileName = href.split(/[\\\\/]+/g).pop() || href
+                            return linkFileName.includes(fileName) || fileName.includes(href)
                         })
 
                         if (shouldReload) {
                             const newLink = link.cloneNode()
-                            const url = new URL(href, window.location.href)
-                            url.searchParams.set('_hot_reload', Date.now().toString())
+                            const url = new URL(href, window.location.origin)
+                            url.searchParams.set('__hot_reload__', Date.now().toString())
                             newLink.href = url.toString()
 
                             // Replace the old link with the new one
                             newLink.addEventListener('load', () => link.remove())
                             newLink.addEventListener('error', () => link.remove())
-
                             link.parentNode.insertBefore(newLink, link.nextSibling)
                         }
                     })
@@ -259,7 +281,7 @@ class Self {
         `
     }
 
-    /** Shuts down the server */
+    /** Shuts down the server and performs the necessary cleanup operation */
     shutdown() {
         console.log('Shutting down server...')
         this.wsClients.forEach(client => client.close())
@@ -347,11 +369,11 @@ async function main() {
     // Self Serve
     try {
         await self.serve()
-        console.log('Server shutdown')
     } catch (error) {
         console.error("Failed to serve files: ", error);
         Deno.exit(1)
     }
+    console.log('Server shutdown')
 }
 
 // This file is being run directly as the main program
