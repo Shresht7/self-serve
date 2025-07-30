@@ -84,7 +84,14 @@ class Self {
             const fileInfo = await Deno.stat(filePath)
 
             if (fileInfo.isDirectory) {
-                return new Response("Directory listing not supported", { status: 403 })
+                // Try to serve index.html from the directory
+                const indexPath = filePath + '/index.html'
+                try {
+                    await Deno.stat(indexPath)
+                    return await this.serveStaticFile(indexPath)
+                } catch {
+                    return new Response("Directory listing not supported", { status: 403 })
+                }
             }
 
             const content = await Deno.readFile(filePath)
