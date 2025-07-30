@@ -73,7 +73,7 @@ I had very specific goals and self-imposed challenges in mind when building this
 
 ## 🏛️ Go Version
 
-This repository also contains a Go implementation (`main.go`) which was the original. It is a very basic file-server and **does not** include features like live-reloading. It is preserved here as one of the main goals of this project, for me, was to build a static file server as concisely as possible in a single file.
+This repository also contains a Go implementation (`./static/go/main.go`) which was the original. It is a very basic file-server and **does not** include features like live-reloading. It is preserved here as one of the main goals of this project, for me, was to build a static file server as concisely as possible in a single file.
 
 ---
 
