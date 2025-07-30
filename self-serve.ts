@@ -358,7 +358,8 @@ class Self {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>404 Not Found</title>
                 <style>
-                    body { font-family: sans-serif; text-align: center; padding: 40px; color: #333; }
+                    *, *:before, *:after { box-sizing: border-box; margin: 0; padding: 0; }
+                    body { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: sans-serif; text-align: center; color: #333; }
                     h1 { font-size: 120px; margin: 0; font-weight: 900; }
                     p { font-size: 24px; }
                     code { background: #eee; padding: 2px 6px; border-radius: 4px; }
