@@ -28,7 +28,7 @@ class Self {
                 return this.handleWebSocketUpgrade(req)
             }
 
-            console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`);
+            console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
             return await this.serveStaticFile(url.pathname)
         }
 
@@ -56,42 +56,42 @@ class Self {
     /** Function to serve static files */
     private async serveStaticFile(pathName: string): Promise<Response> {
         // Normalize path and prevent directory traversal
-        let resolvedPath = this.dir + (pathName.endsWith('/') ? pathName + 'index.html' : pathName);
-        if (pathName === '/') resolvedPath = this.dir + '/index.html';
+        let resolvedPath = this.dir + (pathName.endsWith('/') ? pathName + 'index.html' : pathName)
+        if (pathName === '/') resolvedPath = this.dir + '/index.html'
 
         try {
-            const realBasePath = await Deno.realPath(this.dir);
-            const realResolvedPath = await Deno.realPath(resolvedPath);
+            const realBasePath = await Deno.realPath(this.dir)
+            const realResolvedPath = await Deno.realPath(resolvedPath)
 
             if (!realResolvedPath.startsWith(realBasePath) || resolvedPath.includes('\0')) {
-                console.warn(`\x1b[91m→ Blocked suspicious path: ${pathName}\x1b[0m`);
-                return new Response('Forbidden', { status: 403 });
+                console.warn(`\x1b[91m→ Blocked suspicious path: ${pathName}\x1b[0m`)
+                return new Response('Forbidden', { status: 403 })
             }
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
                 return new Response(this.generateNotFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             }
-            console.error('Error resolving path: ', error);
-            return new Response('Internal Server Error', { status: 500 });
+            console.error('Error resolving path: ', error)
+            return new Response('Internal Server Error', { status: 500 })
         }
 
         // Serve the file or directory
         try {
-            const fileInfo = await Deno.stat(resolvedPath);
+            const fileInfo = await Deno.stat(resolvedPath)
 
             if (fileInfo.isDirectory) {
                 // TODO: Directory listing (to be implemented)
-                return new Response("Directory listing not supported yet", { status: 403 });
+                return new Response("Directory listing not supported yet", { status: 403 })
             }
 
-            const content = await Deno.readFile(resolvedPath);
-            const mimeType = contentType(resolvedPath.split('.').pop() || '') || 'application/octet-stream';
+            const content = await Deno.readFile(resolvedPath)
+            const mimeType = contentType(resolvedPath.split('.').pop() || '') || 'application/octet-stream'
 
             // Inject hot-reload script for HTML files
             if (mimeType === 'text/html; charset=utf-8') {
-                const html = new TextDecoder().decode(content);
-                const hotReloadScript = this.generateHotReloadScript();
-                const modifiedHtml = html.replace(/<\/body>/i, `${hotReloadScript}\n<\/body>`);
+                const html = new TextDecoder().decode(content)
+                const hotReloadScript = this.generateHotReloadScript()
+                const modifiedHtml = html.replace(/<\/body>/i, `${hotReloadScript}\n<\/body>`)
                 return new Response(modifiedHtml, {
                     headers: {
                         "Content-Type": mimeType,
@@ -99,7 +99,7 @@ class Self {
                         "Pragma": "no-cache",
                         "Expires": "0"
                     }
-                });
+                })
             }
 
             // Serve any other static assets
@@ -109,18 +109,18 @@ class Self {
 
             // Cache static assets but allow revalidation during development
             if (mimeType.startsWith('image/') || mimeType === 'application/javascript') {
-                headers['Cache-Control'] = 'public, max-age=0, must-revalidate';
+                headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
             }
-            return new Response(content, { headers });
+            return new Response(content, { headers })
 
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
                 return new Response(this.generateNotFoundPage(), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             } else if (error instanceof Deno.errors.PermissionDenied) {
-                return new Response('Forbidden', { status: 403 });
+                return new Response('Forbidden', { status: 403 })
             }
-            console.error('Error serving file: ', error);
-            return new Response('Internal Server Error', { status: 500 });
+            console.error('Error serving file: ', error)
+            return new Response('Internal Server Error', { status: 500 })
         }
     }
 
@@ -165,8 +165,8 @@ class Self {
                             clearTimeout(debounceTimer)
                         }
                         debounceTimer = setTimeout(() => {
-                            console.log(`\x1b[36mFile changed:\x1b[0m ${webFiles.join(', ')}`);
-                            this.onFilesChanged(webFiles);
+                            console.log(`\x1b[36mFile changed:\x1b[0m ${webFiles.join(', ')}`)
+                            this.onFilesChanged(webFiles)
                         }, 100)
                     }
                 }
@@ -302,7 +302,7 @@ class Self {
                 <p>Page Not Found</p>
             </body>
             </html>
-        `;
+        `
     }
 
     /** Shuts down the server and performs the necessary cleanup operation */
@@ -354,12 +354,12 @@ function parseCommandLineArguments(args: string[]): { dir: string, host: string,
             host: DEFAULT_HOST,
             port: DEFAULT_PORT,
         },
-    });
+    })
 
-    const port = Number(flags.port);
+    const port = Number(flags.port)
     if (isNaN(port) || port < 1 || port > 65535) {
-        console.error(`Invalid port number: ${flags.port}`);
-        Deno.exit(1);
+        console.error(`Invalid port number: ${flags.port}`)
+        Deno.exit(1)
     }
 
     return { ...flags, port }
@@ -385,7 +385,7 @@ async function main() {
     // Initialize the self-server
     const self = new Self(args.dir, args.host, args.port)
 
-    console.log(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`);
+    console.log(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
 
     // Handle graceful shutdown
     Deno.addSignalListener("SIGINT", () => {
@@ -396,7 +396,7 @@ async function main() {
     try {
         await self.serve()
     } catch (error) {
-        console.error("Failed to serve files: ", error);
+        console.error("Failed to serve files: ", error)
         Deno.exit(1)
     }
     console.log('Server shutdown')
