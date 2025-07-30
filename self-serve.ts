@@ -110,8 +110,17 @@ class Self {
 
         if (mimeType === 'text/html; charset=utf-8') {
             const html = new TextDecoder().decode(content)
-            const hotReloadScript = this.generateHotReloadScript();
-            const modifiedHtml = html.replace(/<\/body>/i, `${hotReloadScript}<\/body>`)
+            const hotReloadScript = this.generateHotReloadScript()
+
+            let modifiedHtml
+            if (html.includes('</body>')) {
+                modifiedHtml = html.replace(/<\/body>/i, hotReloadScript + '\n</body>')
+            } else if (html.includes('</html>')) {
+                modifiedHtml = html.replace(/<\/html>/i, hotReloadScript + '\n</html>')
+            } else {
+                modifiedHtml = html + hotReloadScript
+            }
+
             return new Response(modifiedHtml, {
                 headers: {
                     "Content-Type": mimeType,
