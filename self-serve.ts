@@ -356,6 +356,9 @@ function parseCommandLineArguments(args: string[]): { dir: string, host: string,
         },
     })
 
+    // The fallback for the directory is the first non-flag argument
+    flags.dir ??= flags._.length > 0 ? String(flags._[0]) : Deno.cwd();
+
     const port = Number(flags.port)
     if (isNaN(port) || port < 1 || port > 65535) {
         console.error(`Invalid port number: ${flags.port}`)
