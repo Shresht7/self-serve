@@ -356,8 +356,8 @@ function parseCommandLineArguments(args: string[]): { dir: string, host: string,
         },
     })
 
-    // The fallback for the directory is the first non-flag argument
-    flags.dir ??= flags._.length > 0 ? String(flags._[0]) : Deno.cwd();
+    // The first non-flag argument is the directory
+    const dir = flags._.length > 0 ? String(flags._[0]) : flags.dir
 
     const port = Number(flags.port)
     if (isNaN(port) || port < 1 || port > 65535) {
@@ -365,7 +365,7 @@ function parseCommandLineArguments(args: string[]): { dir: string, host: string,
         Deno.exit(1)
     }
 
-    return { ...flags, port }
+    return { ...flags, dir, port }
 }
 
 /** The main entrypoint of the application */
