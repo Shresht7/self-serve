@@ -40,7 +40,7 @@ deno run --allow-net --allow-read self-serve.ts --port 3000
 To compile and install it as a binary
 
 ```sh
-deno install --allow-net --allow-read self-serve.ts --name self-serve 
+deno install --global --allow-net --allow-read self-serve.ts --name self-serve 
 ```
 
 then you can simply do
