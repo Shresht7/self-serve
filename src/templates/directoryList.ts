@@ -29,11 +29,11 @@ export async function generateDirectoryListingPage(pathName: string, resolvedPat
                     :root { color-scheme: light dark; }
                     *, *:before, *:after { box-sizing: border-box; margin: 0; padding: 0; }
                     body { font-family: monospace; padding: 20px; color: #333; display: flex; flex-direction: column; gap: 1rem; }
-                    h1 { border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+                    h1 { border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
                     ul { list-style: none; padding: 0; }
                     li { padding: 5px 0; }
-                    a { text-decoration: none; color: #007bff; }
-                    a:hover { text-decoration: underline; }
+                    a { text-decoration: none; color: #007bff; padding: 0.25rem 0.5rem; border-left: 2px solid transparent; }
+                    a:hover { border-left: 2px solid goldenrod; background-color: #aaa; color: white; }
                     @media (prefers-color-scheme: dark) {
                         h1 { border-bottom: 1px solid #777; }
                         body { color: #eee; background-color: #333 }
