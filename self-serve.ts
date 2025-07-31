@@ -1,10 +1,8 @@
-// Deno Standard Library
-import { contentType } from "jsr:@std/media-types"
-
 // Modules
 import * as cli from './src/cli.ts'
 import * as template from './src/templates/index.ts'
 import * as hotReload from './src/lib/hotReload.ts'
+import * as helpers from './src/helpers/index.ts'
 
 // ----
 // SELF
@@ -112,10 +110,12 @@ class Self {
 
     /** Helper function to serve a single file */
     private async serveFile(filePath: string): Promise<Response> {
+        // Read the file-contents and determine the mime-type
         const content = await Deno.readFile(filePath)
-        const mimeType = contentType(filePath.split('.').pop() || '') || 'application/octet-stream'
+        const mimeType = helpers.getMimeType(filePath)
 
-        if (mimeType === 'text/html; charset=utf-8') {
+        // HTML: Inject hot-reload script
+        if (mimeType.includes('text/html')) {
             const modifiedHtml = hotReload.injectHotReloadScript(content, this.host, this.port)
             return new Response(modifiedHtml, {
                 headers: {
@@ -127,12 +127,16 @@ class Self {
             })
         }
 
+        // Default headers for other file types
         const headers: Record<string, string> = {
             'Content-Type': mimeType
-        };
+        }
+
+        // Set Cache-Control header for images and JavaScript files
         if (mimeType.startsWith('image/') || mimeType === 'application/javascript') {
             headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
         }
+
         return new Response(content, { headers })
     }
 
