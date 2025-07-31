@@ -4,7 +4,7 @@ import { contentType } from "jsr:@std/media-types"
 // Modules
 import * as cli from './src/cli.ts'
 import * as template from './src/templates/index.ts'
-import { generateHotReloadScript } from './src/lib/hotReload.ts'
+import * as hotReload from './src/lib/hotReload.ts'
 
 // ----
 // SELF
@@ -116,7 +116,7 @@ class Self {
         const mimeType = contentType(filePath.split('.').pop() || '') || 'application/octet-stream'
 
         if (mimeType === 'text/html; charset=utf-8') {
-            const modifiedHtml = this.injectHotReloadScript(content);
+            const modifiedHtml = hotReload.injectHotReloadScript(content, this.host, this.port)
             return new Response(modifiedHtml, {
                 headers: {
                     "Content-Type": mimeType,
@@ -134,22 +134,6 @@ class Self {
             headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
         }
         return new Response(content, { headers })
-    }
-
-    /** Injects the hot-reload script into HTML content */
-    private injectHotReloadScript(content: Uint8Array<ArrayBuffer>) {
-        const html = new TextDecoder().decode(content)
-
-        const script = generateHotReloadScript(this.host, this.port)
-        const hotReloadScript = /* HTML */ `<script>${script}</script>`
-
-        if (html.includes('</body>')) {
-            return html.replace(/<\/body>/i, hotReloadScript + '\n</body>')
-        } else if (html.includes('</html>')) {
-            return html.replace(/<\/html>/i, hotReloadScript + '\n</html>')
-        } else {
-            return html + hotReloadScript
-        }
     }
 
     /** Starts the file-watcher to monitor changes in the served directory */
