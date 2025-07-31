@@ -38,7 +38,7 @@ class Self {
             const url = new URL(req.url)
 
             // Handle WebSocket upgrade for hot-reload
-            if (url.pathname === "/__hot_reload__") {
+            if (url.pathname.endsWith('__hot_reload__')) {
                 return this.handleWebSocketUpgrade(req)
             }
 
@@ -46,7 +46,7 @@ class Self {
             console.log(`\x1b[90m-- ${helpers.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
 
             // Serve static files
-            return await this.serveStatic(url.pathname)
+            return await this.handleRequest(url.pathname)
         }
 
         // Start the Deno server
@@ -67,8 +67,8 @@ class Self {
         }
     }
 
-    /** Function to serve static files and directory listings */
-    private async serveStatic(pathName: string): Promise<Response> {
+    /** Function to handle incoming requests for static files and directory listings */
+    private async handleRequest(pathName: string): Promise<Response> {
         // Normalize the path
         const decodedPathName = decodeURIComponent(pathName)
         const resolvedPath = join(this.dir, decodedPathName)
@@ -115,7 +115,7 @@ class Self {
         } else if (error instanceof Deno.errors.PermissionDenied) {
             return new Response('Forbidden', { status: 403 })
         }
-        console.error('Error serving file: ', error)
+        console.error(`Error serving ${pathName}:`, error)
         return new Response('Internal Server Error', { status: 500 })
     }
 
