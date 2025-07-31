@@ -77,20 +77,10 @@ class Self {
         try {
             const fileInfo = await Deno.stat(resolvedPath)
             if (fileInfo.isDirectory) {
-                const indexPath = resolvedPath + (resolvedPath.endsWith('/') ? '' : '/') + 'index.html'
-                try {
-                    await Deno.stat(indexPath)
-                    return await this.serveFile(indexPath)
-                } catch (error) {
-                    if (error instanceof Deno.errors.NotFound) {
-                        const dirList = await template.generateDirectoryListingPage(decodedPathName, resolvedPath)
-                        return new Response(dirList, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
-                    }
-                    throw error
-                }
+                return await this.serveDirectory(resolvedPath, pathName)
+            } else {
+                return await this.serveFile(resolvedPath)
             }
-
-            return await this.serveFile(resolvedPath)
         } catch (error) {
             return this.createErrorResponse(error as Error, pathName)
         }
@@ -124,6 +114,21 @@ class Self {
         }
         console.error('Error serving file: ', error)
         return new Response('Internal Server Error', { status: 500 })
+    }
+
+    /** Serves a directory, either by serving its index.html or by generating a directory listing */
+    private async serveDirectory(path: string, pathName: string): Promise<Response> {
+        const indexPath = path + (path.endsWith('/') ? '' : '/') + 'index.html'
+        try {
+            await Deno.stat(indexPath)
+            return await this.serveFile(indexPath)
+        } catch (error) {
+            if (error instanceof Deno.errors.NotFound) {
+                const dirList = await template.generateDirectoryListingPage(pathName, path)
+                return new Response(dirList, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+            }
+            throw error
+        }
     }
 
     /** Helper function to serve a single file */
