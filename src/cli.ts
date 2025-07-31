@@ -18,10 +18,12 @@ Options:
   -v, --version Show version number
 `
 
+
+
 /** Parses command-line arguments and returns an object with the parsed values */
-export function parse(args: string[]): { dir: string, host: string, port: number, watch: boolean, version: boolean, help: boolean } {
+export function parse(args: string[]) {
     const flags = parseArgs(args, {
-        string: ["dir", "host", "port"],
+        string: ["dir", "host", "port", "cors"],
         boolean: ["watch", "help", "version"],
         negatable: ["watch"],
         alias: {
@@ -37,6 +39,7 @@ export function parse(args: string[]): { dir: string, host: string, port: number
             host: DEFAULT_HOST,
             port: DEFAULT_PORT,
             watch: true,
+            cors: "*",
         },
     })
 
