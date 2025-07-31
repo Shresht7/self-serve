@@ -1,3 +1,9 @@
+/**
+ * Generates the JavaScript code for the hot-reload client-side script.
+ * @param host The host address for the WebSocket connection.
+ * @param port The port number for the WebSocket connection.
+ * @returns The JavaScript code as a string.
+ */
 export function generateHotReloadScript(host: string, port: number) {
     return /* JavaScript */ `
         function setupHotReload() {
@@ -44,4 +50,25 @@ export function generateHotReloadScript(host: string, port: number) {
 
         setupHotReload()            
     `
+}
+
+/**
+ * Injects the hot-reload script into an HTML content.
+ * @param content The HTML content as a Uint8Array.
+ * @param host The host address for the WebSocket connection.
+ * @param port The port number for the WebSocket connection.
+ */
+export function injectHotReloadScript(content: Uint8Array<ArrayBuffer>, host: string, port: number) {
+    const html = new TextDecoder().decode(content)
+
+    const script = generateHotReloadScript(host, port)
+    const hotReloadScript = /* HTML */ `<script>${script}</script>`
+
+    if (html.includes('</body>')) {
+        return html.replace(/<\/body>/i, hotReloadScript + '\n</body>')
+    } else if (html.includes('</html>')) {
+        return html.replace(/<\/html>/i, hotReloadScript + '\n</html>')
+    } else {
+        return html + hotReloadScript
+    }
 }
