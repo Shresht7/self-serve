@@ -160,7 +160,7 @@ class Self {
                 if (event.kind === 'modify' || event.kind === 'create') {
                     // Filter for web files only
                     const webFiles = event.paths.filter(path => {
-                        const ext = path.split('.').pop()?.toLowerCase()
+                        const ext = helpers.getExtension(path)
                         return ext && ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg'].includes(ext)
                     })
 
