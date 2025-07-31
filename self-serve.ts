@@ -6,12 +6,19 @@ import * as helpers from './src/helpers/index.ts'
 
 class Self {
     constructor(
+        /** Directory to serve files from */
         private dir: string,
+        /** Hostname for the server */
         private host: string,
+        /** Port for the server */
         private port: number,
+        /** File system watcher for hot-reloading */
         private watcher: Deno.FsWatcher | null = null,
+        /** File extensions to watch for changes */
         private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg'],
+        /** Set of connected WebSocket clients for hot-reloading */
         private wsClients: Set<WebSocket> = new Set(),
+        /** Controller for graceful server shutdown */
         private abortableController: AbortController = new AbortController(),
     ) {
         // Handle graceful shutdown
@@ -20,8 +27,10 @@ class Self {
 
     /** Starts the server */
     async serve() {
-        this.startFileWatcher()  // Start the File Watcher
+        // Start the File Watcher
+        this.startFileWatcher()
 
+        // Define the request handler
         const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
 
@@ -30,16 +39,21 @@ class Self {
                 return this.handleWebSocketUpgrade(req)
             }
 
+            // Log the request
             console.log(`\x1b[90m-- ${helpers.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
+
+            // Serve static files
             return await this.serveStatic(url.pathname)
         }
 
+        // Start the Deno server
         const server = Deno.serve({
             hostname: this.host,
             port: this.port,
             signal: this.abortableController.signal,
         }, handler)
 
+        // Wait for the server to finish or catch an AbortError
         try {
             await server.finished
         } catch (error) {
