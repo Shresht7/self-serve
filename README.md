@@ -51,13 +51,14 @@ self-serve
 
 ## 📕 Reference
 
- | Flag        | Alias | Description                                                       | Default                 |
- | :---------- | :---: | :---------------------------------------------------------------- | :---------------------- |
- | `--dir`     | `-d`  | The directory to serve. Can also be passed as the first argument. | `.` (current directory) |
- | `--port`    | `-p`  | The port to listen on.                                            | `5327`                  |
- | `--host`    | `-a`  | The host address to bind to.                                      | `localhost`             |
- | `--help`    | `-h`  | Show the help message.                                            |                         |
- | `--version` | `-v`  | Print the application version.                                    |                         |
+ | Flag                     | Alias | Description                                                       | Default                 |
+ | :----------------------- | :---: | :---------------------------------------------------------------- | :---------------------- |
+ | `--dir`                  | `-d`  | The directory to serve. Can also be passed as the first argument. | `.` (current directory) |
+ | `--port`                 | `-p`  | The port to listen on.                                            | `5327`                  |
+ | `--host`                 | `-a`  | The host address to bind to.                                      | `localhost`             |
+ | `--help`                 | `-h`  | Show the help message.                                            |                         |
+ | `--version`              | `-v`  | Print the application version.                                    |                         |
+ | `--watch` / `--no-watch` | `-w`  | Enable or disable the live-reloading feature.                     | `--watch`               |
 
 ---
 
