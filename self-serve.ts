@@ -4,10 +4,6 @@ import * as template from './src/templates/index.ts'
 import * as hotReload from './src/lib/hotReload.ts'
 import * as helpers from './src/helpers/index.ts'
 
-// ----
-// SELF
-// ----
-
 class Self {
     constructor(
         private dir: string,
@@ -33,7 +29,7 @@ class Self {
                 return this.handleWebSocketUpgrade(req)
             }
 
-            console.log(`\x1b[90m-- ${this.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
+            console.log(`\x1b[90m-- ${helpers.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
             return await this.serveStatic(url.pathname)
         }
 
@@ -51,11 +47,6 @@ class Self {
                 throw error
             }
         }
-    }
-
-    /** Helper function to get the IP Address of the client */
-    private getClientIP(req: Request): string {
-        return req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1'
     }
 
     /** Function to serve static files and directory listings */
