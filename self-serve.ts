@@ -66,37 +66,25 @@ class Self {
 
     /** Function to serve static files and directory listings */
     private async serveStatic(pathName: string): Promise<Response> {
-        // Normalize path and prevent directory traversal
+        // Normalize the path
         const decodedPathName = decodeURIComponent(pathName)
         const resolvedPath = this.dir + decodedPathName
 
-        try {
-            const realBasePath = await Deno.realPath(this.dir)
-            const realResolvedPath = await Deno.realPath(resolvedPath)
-
-            if (!realResolvedPath.startsWith(realBasePath) || resolvedPath.includes('\0')) {
-                console.warn(`\x1b[91m→ Blocked suspicious path: ${decodedPathName}\x1b[0m`)
-                return new Response('Forbidden', { status: 403 })
-            }
-        } catch (error) {
-            if (error instanceof Deno.errors.NotFound) {
-                return new Response(template.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
-            }
-            console.error('Error resolving path: ', error)
-            return new Response('Internal Server Error', { status: 500 })
-        }
+        // Check for path traversal and symlinks
+        const errResponse = await this.checkPath(pathName, resolvedPath, this.dir)
+        if (errResponse) { return errResponse }
 
         try {
             const fileInfo = await Deno.stat(resolvedPath)
             if (fileInfo.isDirectory) {
                 const indexPath = resolvedPath + (resolvedPath.endsWith('/') ? '' : '/') + 'index.html'
                 try {
-                    await Deno.stat(indexPath);
+                    await Deno.stat(indexPath)
                     return await this.serveFile(indexPath)
                 } catch (error) {
                     if (error instanceof Deno.errors.NotFound) {
-                        const directoryListing = await template.generateDirectoryListingPage(decodedPathName, resolvedPath)
-                        return new Response(directoryListing, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+                        const dirList = await template.generateDirectoryListingPage(decodedPathName, resolvedPath)
+                        return new Response(dirList, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
                     }
                     throw error
                 }
@@ -104,14 +92,38 @@ class Self {
 
             return await this.serveFile(resolvedPath)
         } catch (error) {
-            if (error instanceof Deno.errors.NotFound) {
-                return new Response(template.generateNotFoundPage(decodedPathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
-            } else if (error instanceof Deno.errors.PermissionDenied) {
+            return this.createErrorResponse(error as Error, pathName)
+        }
+    }
+
+    /**
+     * Checks if the requested path is valid and does not contain suspicious patterns
+     * @returns an Error {@link Response} if there is an issue, or {@link null} if there isn't
+     */
+    private async checkPath(pathName: string, resolvedPath: string, dir: string): Promise<Response | null> {
+        try {
+            const realBasePath = await Deno.realPath(dir)
+            const realResolvedPath = await Deno.realPath(resolvedPath)
+
+            if (!realResolvedPath.startsWith(realBasePath) || resolvedPath.includes('..') || resolvedPath.includes('\0')) {
+                console.warn(`\x1b[91m→ Blocked suspicious path: ${pathName}\x1b[0m`)
                 return new Response('Forbidden', { status: 403 })
             }
-            console.error('Error serving file: ', error)
-            return new Response('Internal Server Error', { status: 500 })
+        } catch (error) {
+            return this.createErrorResponse(error as Error, pathName)
         }
+        return null
+    }
+
+    /** Creates an error response based on the type of error */
+    private createErrorResponse(error: Error, pathName: string) {
+        if (error instanceof Deno.errors.NotFound) {
+            return new Response(template.generateNotFoundPage(pathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+        } else if (error instanceof Deno.errors.PermissionDenied) {
+            return new Response('Forbidden', { status: 403 })
+        }
+        console.error('Error serving file: ', error)
+        return new Response('Internal Server Error', { status: 500 })
     }
 
     /** Helper function to serve a single file */
