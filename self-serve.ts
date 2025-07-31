@@ -1,3 +1,6 @@
+// Deno Standard Library
+import { join, extname } from "jsr:@std/path"
+
 // Modules
 import * as cli from './src/cli.ts'
 import * as template from './src/templates/index.ts'
@@ -68,7 +71,7 @@ class Self {
     private async serveStatic(pathName: string): Promise<Response> {
         // Normalize the path
         const decodedPathName = decodeURIComponent(pathName)
-        const resolvedPath = this.dir + decodedPathName
+        const resolvedPath = join(this.dir, decodedPathName)
 
         // Check for path traversal and symlinks
         const errResponse = await this.checkPath(pathName, resolvedPath, this.dir)
@@ -118,7 +121,7 @@ class Self {
 
     /** Serves a directory, either by serving its index.html or by generating a directory listing */
     private async serveDirectory(path: string, pathName: string): Promise<Response> {
-        const indexPath = path + (path.endsWith('/') ? '' : '/') + 'index.html'
+        const indexPath = join(path, 'index.html')
         try {
             await Deno.stat(indexPath)
             return await this.serveFile(indexPath)
@@ -192,7 +195,7 @@ class Self {
                 if (event.kind === 'modify' || event.kind === 'create') {
                     // Filter for web files only
                     const webFiles = event.paths.filter(path => {
-                        const ext = helpers.getExtension(path)
+                        const ext = extname(path).substring(1)
                         return ext && this.watchFor.includes(ext)
                     })
 
