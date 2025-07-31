@@ -25,6 +25,8 @@ class Self {
         private abortableController: AbortController = new AbortController(),
         /** Whether to enable live-reloading */
         private liveReload: boolean = true,
+        /** Whether to enable CORS */
+        private cors: boolean = false,
     ) {
         // Handle graceful shutdown
         this.handleGracefulShutdown()
@@ -33,6 +35,11 @@ class Self {
     /** Enables or disables live-reloading */
     withLiveReload(yes: boolean) {
         this.liveReload = yes
+        return this
+    }
+
+    withCors(yes: boolean) {
+        this.cors = yes
         return this
     }
 
@@ -57,7 +64,9 @@ class Self {
             console.log(`\x1b[90m-- ${helpers.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
 
             // Serve static files
-            return await this.handleRequest(url.pathname)
+            const response = await this.handleRequest(url.pathname)
+            if (this.cors) { this.applyCors(response) }
+            return response
         }
 
         // Start the Deno server
@@ -175,6 +184,13 @@ class Self {
         }
 
         return new Response(content, { headers })
+    }
+    /** Applies CORS headers to a response if the feature is enabled */
+    private applyCors(response: Response) {
+        if (!this.cors) {
+            return response
+        }
+        response.headers.set('Access-Control-Allow-Origin', '*')
     }
 
     /** Starts the file-watcher to monitor changes in the served directory */
@@ -350,6 +366,7 @@ async function main() {
     // Initialize the self server
     const self = new Self(args.dir, args.host, args.port)
         .withLiveReload(args.watch)
+        .withCors(args.cors)
 
     console.info(`Serving \x1b[33m${args.dir}\x1b[0m on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
     if (!args.watch) {
