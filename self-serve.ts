@@ -25,7 +25,7 @@ class Self {
         private abortableController: AbortController = new AbortController(),
     ) {
         // Handle graceful shutdown
-        Deno.addSignalListener("SIGINT", () => this.shutdown())
+        this.handleGracefulShutdown()
     }
 
     /** Starts the server */
@@ -271,9 +271,43 @@ class Self {
         }
     }
 
+    /** Sets up a listener to gracefully shut down the server on Ctrl+C */
+    private async handleGracefulShutdown() {
+        // Set stdin to raw mode to capture individual key presses
+        try {
+            Deno.stdin.setRaw(true)
+        } catch {
+            // Ignore if not in a TTY environment
+            return
+        }
+        const buffer = new Uint8Array(1)
+
+        while (true) {
+            try {
+                const n = await Deno.stdin.read(buffer)
+                if (n === null) break // Stdin closed
+
+                // Check for Ctrl+C (ETX character, byte value 3)
+                if (buffer[0] === 3) {
+                    this.shutdown()
+                    break // Exit the listener loop
+                }
+            } catch {
+                // Ignore errors and exit loop
+                break
+            }
+        }
+    }
+
     /** Shuts down the server and performs the necessary cleanup operation */
     shutdown() {
         console.log('Shutting down server...')
+        // Restore terminal to its normal state
+        try {
+            Deno.stdin.setRaw(false)
+        } catch {
+            // Ignore if not in a TTY environment
+        }
         this.wsClients.forEach(client => client.readyState === WebSocket.OPEN && client.close())
         this.wsClients.clear()
         this.watcher?.close()
