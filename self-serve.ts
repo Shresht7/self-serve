@@ -9,9 +9,10 @@ class Self {
         private dir: string,
         private host: string,
         private port: number,
-        private abortableController: AbortController = new AbortController(),
         private watcher: Deno.FsWatcher | null = null,
-        private wsClients: Set<WebSocket> = new Set()
+        private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg'],
+        private wsClients: Set<WebSocket> = new Set(),
+        private abortableController: AbortController = new AbortController(),
     ) {
         // Handle graceful shutdown
         Deno.addSignalListener("SIGINT", () => this.shutdown())
@@ -161,7 +162,7 @@ class Self {
                     // Filter for web files only
                     const webFiles = event.paths.filter(path => {
                         const ext = helpers.getExtension(path)
-                        return ext && ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg'].includes(ext)
+                        return ext && this.watchFor.includes(ext)
                     })
 
                     if (webFiles.length > 0) {
