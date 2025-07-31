@@ -23,8 +23,8 @@ Options:
 /** Parses command-line arguments and returns an object with the parsed values */
 export function parse(args: string[]) {
     const flags = parseArgs(args, {
-        string: ["dir", "host", "port"],
-        boolean: ["watch", "cors", "help", "version"],
+        string: ["dir", "host", "port", "cors"],
+        boolean: ["watch", "help", "version"],
         negatable: ["watch"],
         alias: {
             "help": "h",
@@ -39,6 +39,7 @@ export function parse(args: string[]) {
             host: DEFAULT_HOST,
             port: DEFAULT_PORT,
             watch: true,
+            cors: "*",
         },
     })
 

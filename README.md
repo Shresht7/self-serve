@@ -69,6 +69,7 @@ self-serve
  | `--port`                 | `-p`  | The port to listen on.                                            | `5327`                  |
  | `--host`                 | `-a`  | The host address to bind to.                                      | `localhost`             |
  | `--watch` / `--no-watch` | `-w`  | Enable or disable the live-reloading feature.                     | `--watch`               |
+ | `--cors [origin]` | | Enable CORS, optionally specifying an origin. | `*` (if flag is present) |
  | `--help`                 | `-h`  | Show the help message.                                            |                         |
  | `--version`              | `-v`  | Print the application version.                                    |                         |
 

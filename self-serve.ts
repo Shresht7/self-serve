@@ -25,8 +25,8 @@ class Self {
         private abortableController: AbortController = new AbortController(),
         /** Whether to enable live-reloading */
         private liveReload: boolean = true,
-        /** Whether to enable CORS */
-        private cors: boolean = false,
+        /** Whether to enable CORS and the origin to allow */
+        private cors: string = '',
     ) {
         // Handle graceful shutdown
         this.handleGracefulShutdown()
@@ -38,8 +38,8 @@ class Self {
         return this
     }
 
-    withCors(yes: boolean) {
-        this.cors = yes
+    withCors(origin: string) {
+        this.cors = origin
         return this
     }
 
@@ -187,10 +187,9 @@ class Self {
     }
     /** Applies CORS headers to a response if the feature is enabled */
     private applyCors(response: Response) {
-        if (!this.cors) {
-            return response
+        if (this.cors) {
+            response.headers.set('Access-Control-Allow-Origin', this.cors)
         }
-        response.headers.set('Access-Control-Allow-Origin', '*')
     }
 
     /** Starts the file-watcher to monitor changes in the served directory */
