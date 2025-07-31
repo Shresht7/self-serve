@@ -23,22 +23,33 @@ class Self {
         private wsClients: Set<WebSocket> = new Set(),
         /** Controller for graceful server shutdown */
         private abortableController: AbortController = new AbortController(),
+        /** Whether to enable live-reloading */
+        private liveReload: boolean = true,
     ) {
         // Handle graceful shutdown
         this.handleGracefulShutdown()
     }
 
+    /** Enables or disables live-reloading */
+    withLiveReload(yes: boolean) {
+        this.liveReload = yes
+        return this
+    }
+
     /** Starts the server */
     async serve() {
-        // Start the File Watcher
-        this.startFileWatcher()
+        // Start the File Watcher if watching is enabled
+        if (this.liveReload) {
+            this.startFileWatcher()
+        }
 
         // Define the request handler
         const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
 
             // Handle WebSocket upgrade for hot-reload
-            if (url.pathname.endsWith('__hot_reload__')) {
+            // Handle WebSocket upgrade for hot-reload if enabled
+            if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
                 return this.handleWebSocketUpgrade(req)
             }
 
@@ -140,8 +151,8 @@ class Self {
         const content = await Deno.readFile(filePath)
         const mimeType = helpers.getMimeType(filePath)
 
-        // HTML: Inject hot-reload script
-        if (mimeType.includes('text/html')) {
+        // HTML: Inject hot-reload script if enabled
+        if (this.liveReload && mimeType.includes('text/html')) {
             const modifiedHtml = hotReload.injectHotReloadScript(content, this.host, this.port)
             return new Response(modifiedHtml, {
                 headers: {
@@ -338,8 +349,12 @@ async function main() {
 
     // Initialize the self server
     const self = new Self(args.dir, args.host, args.port)
+        .withLiveReload(args.watch)
 
-    console.info(`File Server running on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m serving \x1b[33m${args.dir}\x1b[0m`);
+    console.info(`Serving \x1b[33m${args.dir}\x1b[0m on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
+    if (!args.watch) {
+        console.info('Live-reload disabled')
+    }
 
     // Self Serve
     try {
