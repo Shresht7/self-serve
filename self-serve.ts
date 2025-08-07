@@ -76,21 +76,23 @@ class Self {
         // Define the request handler
         const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
-            const start = performance.now()
 
+            const start = performance.now() // To time the request-response cycle
+
+            // Route the request to the appropriate handler and get a response
             let response: Response
-
-            // Handle WebSocket upgrade for hot-reload
             if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
+                // Handle WebSocket upgrade for hot-reload
                 response = this.handleWebSocketUpgrade(req)
             } else if (url.pathname.startsWith('/' + this.apiDir)) {
                 // Handle API requests
                 response = await this.handleApiRequest(req)
             } else {
                 // Serve static files
-                response = await this.handleRequest(url.pathname)
+                response = await this.handleStaticRequest(url.pathname)
             }
 
+            // Apply CORS headers if required
             if (this.cors) { this.applyCors(response) }
 
             // Log the request
@@ -120,7 +122,7 @@ class Self {
     }
 
     /** Function to handle incoming requests for static files and directory listings */
-    private async handleRequest(pathName: string): Promise<Response> {
+    private async handleStaticRequest(pathName: string): Promise<Response> {
         // Normalize the path
         const decodedPathName = decodeURIComponent(pathName)
         const resolvedPath = join(this.dir, decodedPathName)
