@@ -1,4 +1,4 @@
-import { parseArgs } from "jsr:@std/cli"
+import { parseArgs } from "@std/cli"
 
 const VERSION = "v0.3.0"
 

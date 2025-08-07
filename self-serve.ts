@@ -1,6 +1,6 @@
 // Deno Standard Library
-import { join, extname } from "jsr:@std/path"
-import { green, gray, cyan } from "jsr:@std/fmt/colors"
+import { join, extname } from "@std/path"
+import { green, gray, cyan } from "@std/fmt/colors"
 import { getColoredStatusText } from "./src/helpers/index.ts"
 
 // Modules

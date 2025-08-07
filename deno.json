@@ -1,0 +1,14 @@
+{
+    "name": "self-serve",
+    "version": "0.3.0",
+    "imports": {
+        "@std/cli": "jsr:@std/cli@^0.224.0",
+        "@std/fmt/colors": "jsr:@std/fmt@^0.224.0/colors",
+        "@std/media-types": "jsr:@std/media-types@^0.224.0",
+        "@std/path": "jsr:@std/path@^0.224.0"
+    },
+    "tasks": {
+        "dev": "deno run --allow-read --allow-net --watch self-serve.ts",
+        "start": "deno run --allow-read --allow-net self-serve.ts"
+    }
+}

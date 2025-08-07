@@ -1,7 +1,7 @@
 // Library
-import { extname } from "jsr:@std/path"
-import { contentType } from "jsr:@std/media-types/content-type"
-import { green, yellow, red, bold } from "jsr:@std/fmt/colors"
+import { extname } from "@std/path"
+import { contentType } from "@std/media-types/content-type"
+import { green, yellow, red, bold } from "@std/fmt/colors"
 
 
 /** Helper function to get the IP Address of the client */
