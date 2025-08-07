@@ -1,7 +1,6 @@
 // Deno Standard Library
 import { join, extname, toFileUrl } from "@std/path"
 import { green, gray, cyan } from "@std/fmt/colors"
-import { getColoredStatusText } from "./src/helpers/index.ts"
 
 // Modules
 import * as cli from './src/cli.ts'
@@ -78,7 +77,7 @@ class Self {
 
             // Log the request
             const duration = (performance.now() - start).toFixed(2)
-            const statusText = getColoredStatusText(response.status)
+            const statusText = helpers.getColoredStatusText(response.status)
             console.log(gray(`-- ${helpers.getClientIP(req)} ${green(req.method)} ${url.pathname} ${statusText} ${cyan(`${duration}ms`)}`))
 
             return response
