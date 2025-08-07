@@ -9,26 +9,44 @@ import * as hotReload from './src/lib/hotReload.ts'
 import * as helpers from './src/helpers/index.ts'
 
 interface Config {
+    /** The directory to serve files from */
     dir: string
+    /** The host to bind the server to */
     host: string
+    /** The port to bind the server to */
     port: number
+    /** Whether to enable live-reload */
     watch: boolean
+    /** Whether to enable CORS and on what origins */
     cors: string
+    /** Whether to enable SPA fallback routing */
     spa: boolean
+    /** Path to the server-actions api directory */
     apiDir: string
 }
 
 class Self {
+    /** The directory to serve the files from */
     private dir: string
+    /** The hostname of the server */
     private host: string
+    /** The port of the server */
     private port: number
+    /** Whether to enable live-reload */
     private liveReload: boolean
+    /** Whether to enable CORS and on what origins */
     private cors: string
+    /** Whether to enable SPA fallback routing */
     private spa: boolean
+    /** Path to the server-actions api directory */
     private apiDir: string
+    /** File-System Watcher for hot-reloading */
     private watcher: Deno.FsWatcher | null = null
+    /** The file-extensions to watch for changes */
     private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg']
+    /** Set of connected WebSocket clients */
     private wsClients: Set<WebSocket> = new Set()
+    /** AbortController for graceful shutdown */
     private abortableController: AbortController = new AbortController()
 
     /**
