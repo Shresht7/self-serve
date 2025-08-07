@@ -66,7 +66,7 @@ class Self {
             // Handle WebSocket upgrade for hot-reload
             if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
                 response = this.handleWebSocketUpgrade(req)
-            } else if (url.pathname.startsWith('/api/')) {
+            } else if (url.pathname.startsWith('/' + this.apiDir)) {
                 // Handle API requests
                 response = await this.handleApiRequest(req)
             } else {
@@ -131,7 +131,7 @@ class Self {
      */
     private async handleApiRequest(req: Request): Promise<Response> {
         const url = new URL(req.url)
-        const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove /api/ prefix
+        const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
         const apiFilePath = join(Deno.cwd(), this.apiDir, apiPath + '.ts') // Assume .ts for now
 
         try {
