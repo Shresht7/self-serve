@@ -15,6 +15,7 @@ interface SelfServeOptions {
     port: number
     watch: boolean
     cors: string
+    spa: boolean
 }
 
 class Self {
@@ -23,17 +24,23 @@ class Self {
     private port: number
     private liveReload: boolean
     private cors: string
+    private spa: boolean
     private watcher: Deno.FsWatcher | null = null
     private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg']
     private wsClients: Set<WebSocket> = new Set()
     private abortableController: AbortController = new AbortController()
 
+    /**
+     * Creates a new instance of the Self server
+     * @param options - The configuration options for the server
+     */
     constructor(options: SelfServeOptions) {
         this.dir = options.dir
         this.host = options.host
         this.port = options.port
         this.liveReload = options.watch
         this.cors = options.cors
+        this.spa = options.spa
 
         // Handle graceful shutdown
         this.handleGracefulShutdown()
@@ -131,6 +138,10 @@ class Self {
     /** Creates an error response based on the type of error */
     private createErrorResponse(error: Error, pathName: string) {
         if (error instanceof Deno.errors.NotFound) {
+            if (this.spa) {
+                const indexPath = join(this.dir, 'index.html')
+                return this.serveFile(indexPath)
+            }
             return new Response(template.generateNotFoundPage(pathName), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
         } else if (error instanceof Deno.errors.PermissionDenied) {
             return new Response('Forbidden', { status: 403 })
@@ -373,6 +384,7 @@ async function main() {
         port: args.port,
         watch: args.watch,
         cors: args.cors,
+        spa: args.spa,
     })
 
     console.info(`Serving \x1b[33m${args.dir}\x1b[0m on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
