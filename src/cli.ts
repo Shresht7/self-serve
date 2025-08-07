@@ -15,6 +15,7 @@ Usage:
   self-serve --port 8080          # Use a different port
   self-serve --no-watch           # Disable live-reloading
   self-serve --spa                # Enable SPA mode (fallback to index.html)
+  self-serve --api api            # Enable API routes from the 'api' directory
 
 Options:
   -d, --dir <path>      Directory to serve (default: current directory)
@@ -24,6 +25,7 @@ Options:
       --no-watch        Disable live-reloading
       --cors <origin>   Enable CORS for a specific origin (default: "*")
       --spa             Enable SPA mode (fallback to index.html)
+      --api <path>      Enable API routes from the specified directory (default: "api/")
 
   -h, --help            Show this help message
   -v, --version         Show version number
@@ -34,7 +36,7 @@ Options:
 /** Parses command-line arguments and returns an object with the parsed values */
 export function parse(args: string[]) {
     const flags = parseArgs(args, {
-        string: ["dir", "host", "port", "cors"],
+        string: ["dir", "host", "port", "cors", "api"],
         boolean: ["watch", "help", "version", "spa"],
         negatable: ["watch"],
         alias: {
@@ -52,6 +54,7 @@ export function parse(args: string[]) {
             watch: true,
             cors: "*",
             spa: false,
+            api: "api/",
         },
     })
 

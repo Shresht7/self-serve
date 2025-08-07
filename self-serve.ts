@@ -1,7 +1,6 @@
 // Deno Standard Library
-import { join, extname } from "@std/path"
+import { join, extname, toFileUrl } from "@std/path"
 import { green, gray, cyan } from "@std/fmt/colors"
-import { getColoredStatusText } from "./src/helpers/index.ts"
 
 // Modules
 import * as cli from './src/cli.ts'
@@ -9,38 +8,59 @@ import * as template from './src/templates/index.ts'
 import * as hotReload from './src/lib/hotReload.ts'
 import * as helpers from './src/helpers/index.ts'
 
-interface SelfServeOptions {
+interface Config {
+    /** The directory to serve files from */
     dir: string
+    /** The host to bind the server to */
     host: string
+    /** The port to bind the server to */
     port: number
+    /** Whether to enable live-reload */
     watch: boolean
+    /** Whether to enable CORS and on what origins */
     cors: string
+    /** Whether to enable SPA fallback routing */
     spa: boolean
+    /** Path to the server-actions api directory */
+    apiDir: string
 }
 
 class Self {
+    /** The directory to serve the files from */
     private dir: string
+    /** The hostname of the server */
     private host: string
+    /** The port of the server */
     private port: number
+    /** Whether to enable live-reload */
     private liveReload: boolean
+    /** Whether to enable CORS and on what origins */
     private cors: string
+    /** Whether to enable SPA fallback routing */
     private spa: boolean
+    /** Path to the server-actions api directory */
+    private apiDir: string
+    /** File-System Watcher for hot-reloading */
     private watcher: Deno.FsWatcher | null = null
+    /** The file-extensions to watch for changes */
     private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg']
+    /** Set of connected WebSocket clients */
     private wsClients: Set<WebSocket> = new Set()
+    /** AbortController for graceful shutdown */
     private abortableController: AbortController = new AbortController()
 
     /**
      * Creates a new instance of the Self server
-     * @param options - The configuration options for the server
+     * @param cfg - The configuration options for the server
      */
-    constructor(options: SelfServeOptions) {
-        this.dir = options.dir
-        this.host = options.host
-        this.port = options.port
-        this.liveReload = options.watch
-        this.cors = options.cors
-        this.spa = options.spa
+    constructor(cfg: Config) {
+        this.dir = cfg.dir
+        this.host = cfg.host
+        this.port = cfg.port
+        this.liveReload = cfg.watch
+        this.cors = cfg.cors
+        this.spa = cfg.spa
+        this.apiDir = cfg.apiDir
 
         // Handle graceful shutdown
         this.handleGracefulShutdown()
@@ -56,21 +76,28 @@ class Self {
         // Define the request handler
         const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
-            const start = performance.now()
 
-            // Handle WebSocket upgrade for hot-reload
-            // Handle WebSocket upgrade for hot-reload if enabled
+            const start = performance.now() // To time the request-response cycle
+
+            // Route the request to the appropriate handler and get a response
+            let response: Response
             if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
-                return this.handleWebSocketUpgrade(req)
+                // Handle WebSocket upgrade for hot-reload
+                response = this.handleWebSocketUpgrade(req)
+            } else if (url.pathname.startsWith('/' + this.apiDir)) {
+                // Handle API requests
+                response = await this.handleApiRequest(req)
+            } else {
+                // Serve static files
+                response = await this.handleStaticRequest(url.pathname)
             }
 
-            // Serve static files
-            const response = await this.handleRequest(url.pathname)
+            // Apply CORS headers if required
             if (this.cors) { this.applyCors(response) }
 
             // Log the request
             const duration = (performance.now() - start).toFixed(2)
-            const statusText = getColoredStatusText(response.status)
+            const statusText = helpers.getColoredStatusText(response.status)
             console.log(gray(`-- ${helpers.getClientIP(req)} ${green(req.method)} ${url.pathname} ${statusText} ${cyan(`${duration}ms`)}`))
 
             return response
@@ -95,7 +122,7 @@ class Self {
     }
 
     /** Function to handle incoming requests for static files and directory listings */
-    private async handleRequest(pathName: string): Promise<Response> {
+    private async handleStaticRequest(pathName: string): Promise<Response> {
         // Normalize the path
         const decodedPathName = decodeURIComponent(pathName)
         const resolvedPath = join(this.dir, decodedPathName)
@@ -200,6 +227,41 @@ class Self {
 
         return new Response(content, { headers })
     }
+
+    /**
+     * Handles API requests by dynamically importing and executing API modules.
+     * @param req - The incoming Request object.
+     * @returns A Promise that resolves to a Response object.
+     */
+    private async handleApiRequest(req: Request): Promise<Response> {
+        const url = new URL(req.url)
+        const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
+
+        const apiFilePath = await helpers.resolveApiFilePath(Deno.cwd(), this.dir, this.apiDir, apiPath)
+        if (!apiFilePath) {
+            return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
+        }
+
+        try {
+            // Dynamically import the API module
+            const apiModule = await import(toFileUrl(apiFilePath).toString())
+
+            // Get the HTTP method function (e.g., GET, POST)
+            const method = req.method.toUpperCase()
+            const handler = apiModule[method]
+
+            if (typeof handler === 'function') {
+                // Execute the handler and return its response
+                return await handler(req)
+            } else {
+                return new Response(`Method ${method} not allowed for ${apiPath}`, { status: 405 })
+            }
+        } catch (error) {
+            console.error(`Error handling API request for ${apiPath}:`, error)
+            return new Response('Internal Server Error', { status: 500 })
+        }
+    }
+
     /** Applies CORS headers to a response if the feature is enabled */
     private applyCors(response: Response) {
         if (this.cors) {
@@ -385,6 +447,7 @@ async function main() {
         watch: args.watch,
         cors: args.cors,
         spa: args.spa,
+        apiDir: args.api,
     })
 
     console.info(`Serving \x1b[33m${args.dir}\x1b[0m on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
