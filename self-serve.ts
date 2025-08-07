@@ -61,9 +61,7 @@ class Self {
         this.cors = cfg.cors
         this.spa = cfg.spa
         this.apiDir = cfg.apiDir
-
-        // Handle graceful shutdown
-        this.handleGracefulShutdown()
+        this.setupShutdownListener()
     }
 
     /** Starts the server */
@@ -375,7 +373,7 @@ class Self {
     }
 
     /** Sets up a listener to gracefully shut down the server on Ctrl+C */
-    private async handleGracefulShutdown() {
+    private async setupShutdownListener() {
         // Set stdin to raw mode to capture individual key presses
         try {
             Deno.stdin.setRaw(true)
