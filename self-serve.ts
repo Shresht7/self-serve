@@ -76,15 +76,15 @@ class Self {
         // Define the request handler
         const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
-
             const start = performance.now() // To time the request-response cycle
+
+            if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
+                return this.handleWebSocketUpgrade(req)
+            }
 
             // Route the request to the appropriate handler and get a response
             let response: Response
-            if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
-                // Handle WebSocket upgrade for hot-reload
-                response = this.handleWebSocketUpgrade(req)
-            } else if (url.pathname.startsWith('/' + this.apiDir)) {
+            if (url.pathname.startsWith('/' + this.apiDir)) {
                 // Handle API requests
                 response = await this.handleApiRequest(req)
             } else {
