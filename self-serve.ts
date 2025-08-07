@@ -236,12 +236,13 @@ class Self {
     private async handleApiRequest(req: Request): Promise<Response> {
         const url = new URL(req.url)
         const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
-        const apiFilePath = join(Deno.cwd(), this.dir, this.apiDir, apiPath + '.ts') // Assume .ts for now
+
+        const apiFilePath = await helpers.resolveApiFilePath(Deno.cwd(), this.dir, this.apiDir, apiPath)
+        if (!apiFilePath) {
+            return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
+        }
 
         try {
-            // Check if the API file exists
-            await Deno.stat(apiFilePath)
-
             // Dynamically import the API module
             const apiModule = await import(toFileUrl(apiFilePath).toString())
 
@@ -256,15 +257,8 @@ class Self {
                 return new Response(`Method ${method} not allowed for ${apiPath}`, { status: 405 })
             }
         } catch (error) {
-            if (error instanceof Deno.errors.NotFound) {
-                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
-            } else if (error instanceof TypeError && error.message.includes('Module not found')) {
-                // This catches import errors for non-existent modules
-                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
-            } else {
-                console.error(`Error handling API request for ${apiPath}:`, error)
-                return new Response('Internal Server Error', { status: 500 })
-            }
+            console.error(`Error handling API request for ${apiPath}:`, error)
+            return new Response('Internal Server Error', { status: 500 })
         }
     }
 
