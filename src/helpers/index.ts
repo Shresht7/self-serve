@@ -1,8 +1,7 @@
 // Library
+import { extname } from "@std/path"
+import { contentType } from "@std/media-types/content-type"
 import { green, yellow, red, bold } from "@std/fmt/colors"
-
-// File-system helpers
-export * from './fs.ts'
 
 /** Helper function to get the IP Address of the client */
 export function getClientIP(req: Request): string {
@@ -21,4 +20,10 @@ export function getColoredStatusText(status: number): string {
         return red(`[${status}]`)
     }
     return bold(red(`[${status}]`))
+}
+
+/** Helper function to get the mime-type of a file */
+export function getMimeType(path: string) {
+    const ext = extname(path).substring(1)
+    return contentType(ext) || 'application/octet-stream'
 }

@@ -1,11 +1,12 @@
 // Deno Standard Library
-import { join, extname, toFileUrl } from "@std/path"
+import { join, extname } from "@std/path"
 import { green, gray, cyan, red, yellow, underline, italic } from "@std/fmt/colors"
 
 // Modules
 import * as cli from './src/cli.ts'
 import * as template from './src/templates/index.ts'
 import * as hotReload from './src/lib/hotReload.ts'
+import * as api from './src/lib/serverFunctions.ts'
 import * as helpers from './src/helpers/index.ts'
 
 interface Config {
@@ -232,33 +233,11 @@ class Self {
      * @param req - The incoming Request object.
      * @returns A Promise that resolves to a Response object.
      */
-    private async handleApiRequest(req: Request): Promise<Response> {
+    private handleApiRequest(req: Request): Promise<Response> {
         const url = new URL(req.url)
-        const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
-
-        const apiFilePath = await helpers.resolveApiFilePath(Deno.cwd(), this.dir, this.apiDir, apiPath)
-        if (!apiFilePath) {
-            return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
-        }
-
-        try {
-            // Dynamically import the API module
-            const apiModule = await import(toFileUrl(apiFilePath).toString())
-
-            // Get the HTTP method function (e.g., GET, POST)
-            const method = req.method.toUpperCase()
-            const handler = apiModule[method]
-
-            if (typeof handler === 'function') {
-                // Execute the handler and return its response
-                return await handler(req)
-            } else {
-                return new Response(`Method ${method} not allowed for ${apiPath}`, { status: 405 })
-            }
-        } catch (error) {
-            console.error(red(`Error handling API request for ${apiPath}:`), error)
-            return new Response('Internal Server Error', { status: 500 })
-        }
+        const endpoint = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
+        const apiDir = join(Deno.cwd(), this.dir, this.apiDir)
+        return api.handleServerFunction(apiDir, endpoint, req)
     }
 
     /** Applies CORS headers to a response if the feature is enabled */
