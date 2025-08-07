@@ -189,6 +189,10 @@ class Self {
             headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
         }
 
+        // Add nosniff header to all responses for security
+        // This prevents the browser from trying to guess the content-type which can help mitigate certain types of attacks
+        headers['X-Content-Type-Options'] = 'nosniff'
+
         return new Response(content, { headers })
     }
     /** Applies CORS headers to a response if the feature is enabled */
