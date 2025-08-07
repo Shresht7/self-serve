@@ -9,40 +9,34 @@ import * as template from './src/templates/index.ts'
 import * as hotReload from './src/lib/hotReload.ts'
 import * as helpers from './src/helpers/index.ts'
 
+interface SelfServeOptions {
+    dir: string
+    host: string
+    port: number
+    watch: boolean
+    cors: string
+}
+
 class Self {
-    constructor(
-        /** Directory to serve files from */
-        private dir: string,
-        /** Hostname for the server */
-        private host: string,
-        /** Port for the server */
-        private port: number,
-        /** File system watcher for hot-reloading */
-        private watcher: Deno.FsWatcher | null = null,
-        /** File extensions to watch for changes */
-        private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg'],
-        /** Set of connected WebSocket clients for hot-reloading */
-        private wsClients: Set<WebSocket> = new Set(),
-        /** Controller for graceful server shutdown */
-        private abortableController: AbortController = new AbortController(),
-        /** Whether to enable live-reloading */
-        private liveReload: boolean = true,
-        /** Whether to enable CORS and the origin to allow */
-        private cors: string = '',
-    ) {
+    private dir: string
+    private host: string
+    private port: number
+    private liveReload: boolean
+    private cors: string
+    private watcher: Deno.FsWatcher | null = null
+    private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg']
+    private wsClients: Set<WebSocket> = new Set()
+    private abortableController: AbortController = new AbortController()
+
+    constructor(options: SelfServeOptions) {
+        this.dir = options.dir
+        this.host = options.host
+        this.port = options.port
+        this.liveReload = options.watch
+        this.cors = options.cors
+
         // Handle graceful shutdown
         this.handleGracefulShutdown()
-    }
-
-    /** Enables or disables live-reloading */
-    withLiveReload(yes: boolean) {
-        this.liveReload = yes
-        return this
-    }
-
-    withCors(origin: string) {
-        this.cors = origin
-        return this
     }
 
     /** Starts the server */
@@ -373,9 +367,13 @@ async function main() {
     }
 
     // Initialize the self server
-    const self = new Self(args.dir, args.host, args.port)
-        .withLiveReload(args.watch)
-        .withCors(args.cors)
+    const self = new Self({
+        dir: args.dir,
+        host: args.host,
+        port: args.port,
+        watch: args.watch,
+        cors: args.cors,
+    })
 
     console.info(`Serving \x1b[33m${args.dir}\x1b[0m on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
     if (!args.watch) {
