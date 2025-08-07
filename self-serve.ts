@@ -1,6 +1,6 @@
 // Deno Standard Library
 import { join, extname, toFileUrl } from "@std/path"
-import { green, gray, cyan } from "@std/fmt/colors"
+import { green, gray, cyan, red, yellow, underline, italic } from "@std/fmt/colors"
 
 // Modules
 import * as cli from './src/cli.ts'
@@ -153,7 +153,7 @@ class Self {
             const realResolvedPath = await Deno.realPath(resolvedPath)
 
             if (!realResolvedPath.startsWith(realBasePath) || resolvedPath.includes('..') || resolvedPath.includes('\0')) {
-                console.warn(`\x1b[91m→ Blocked suspicious path: ${pathName}\x1b[0m`)
+                console.warn(red(`→ Blocked suspicious path: ${pathName}`))
                 return new Response('Forbidden', { status: 403 })
             }
         } catch (error) {
@@ -173,7 +173,7 @@ class Self {
         } else if (error instanceof Deno.errors.PermissionDenied) {
             return new Response('Forbidden', { status: 403 })
         }
-        console.error(`Error serving ${pathName}:`, error)
+        console.error(red(`Error serving ${pathName}:`), error)
         return new Response('Internal Server Error', { status: 500 })
     }
 
@@ -257,7 +257,7 @@ class Self {
                 return new Response(`Method ${method} not allowed for ${apiPath}`, { status: 405 })
             }
         } catch (error) {
-            console.error(`Error handling API request for ${apiPath}:`, error)
+            console.error(red(`Error handling API request for ${apiPath}:`), error)
             return new Response('Internal Server Error', { status: 500 })
         }
     }
@@ -275,7 +275,7 @@ class Self {
             // Check if the directory exists and is readable
             const dirInfo = await Deno.stat(this.dir)
             if (!dirInfo || !dirInfo.isDirectory) {
-                console.error(`${this.dir} is not a directory`)
+                console.error(red(`${this.dir} is not a directory`))
                 return
             }
 
@@ -308,7 +308,7 @@ class Self {
                             clearTimeout(debounceTimer)
                         }
                         debounceTimer = setTimeout(() => {
-                            console.log(`\x1b[36mFile changed:\x1b[0m ${webFiles.join(', ')}`)
+                            console.log(cyan(`File changed: ${webFiles.join(', ')}`))
                             this.onFilesChanged(webFiles)
                         }, 100)
                     }
@@ -316,11 +316,11 @@ class Self {
             }
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                console.error(`Directory not found: ${this.dir}`)
+                console.error(red(`Directory not found: ${this.dir}`))
             } else if (error instanceof Deno.errors.PermissionDenied) {
-                console.error(`Permission denied: ${this.dir}`)
+                console.error(red(`Permission denied: ${this.dir}`))
             } else {
-                console.error('Error watching files: ', error)
+                console.error(red('Error watching files: '), error)
             }
         }
     }
@@ -342,17 +342,17 @@ class Self {
 
         socket.addEventListener('open', () => {
             this.wsClients.add(socket)
-            console.log(`\x1b[32m→ WebSocket client connected (${this.wsClients.size} total)\x1b[0m`)
+            console.log(green(`→ WebSocket client connected (${this.wsClients.size} total)`))
         })
 
         socket.addEventListener('close', () => {
             this.wsClients.delete(socket)
-            console.log(`\x1b[91m→ WebSocket client disconnected (${this.wsClients.size} remaining)\x1b[0m`)
+            console.log(red(`→ WebSocket client disconnected (${this.wsClients.size} remaining)`))
         })
 
         socket.addEventListener('error', (error) => {
             this.wsClients.delete(socket)
-            console.error(`\x1b[91m→ WebSocket error:\x1b[0m`, error)
+            console.error(red(`→ WebSocket error:`), error)
         })
 
         return response
@@ -365,7 +365,7 @@ class Self {
                 try {
                     client.send(message)
                 } catch (error) {
-                    console.error(`\x1b[91m→ Failed to send to client:\x1b[0m`, error)
+                    console.error(red(`→ Failed to send to client:`), error)
                     this.wsClients.delete(client)
                 }
             } else {
@@ -450,16 +450,16 @@ async function main() {
         apiDir: args.api,
     })
 
-    console.info(`Serving \x1b[33m${args.dir}\x1b[0m on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
+    console.info(`Serving ${yellow(args.dir)} on ${underline(cyan(`http://${args.host}:${args.port}`))}`)
     if (!args.watch) {
-        console.info('Live-reload disabled')
+        console.info(italic('Live-reload disabled'))
     }
 
     // Self Serve
     try {
         await self.serve()
     } catch (error) {
-        console.error("Failed to serve files: ", error)
+        console.error(red("Failed to serve files: "), error)
         Deno.exit(1)
     }
     console.info('Server shutdown')
