@@ -7,15 +7,24 @@ const DEFAULT_PORT = "5327"
 
 const HELP_MESSAGE = `self-serve [directory] [options]
 
-self-serve is a super simple HTTP static file server
+A simple static file server for local development
+
+Usage:
+  self-serve .                    # Serve current directory
+  self-serve public               # Serve 'public' directory
+  self-serve --port 8080          # Use a different port
+  self-serve --no-watch           # Disable live-reloading
 
 Options:
-  -d, --dir     Directory to serve (default: current directory)
-  -a, --host    Host address to listen on (default: ${DEFAULT_HOST})
-  -p, --port    Port to listen on (default: ${DEFAULT_PORT})
- 
-  -h, --help    Show this help message
-  -v, --version Show version number
+  -d, --dir <path>      Directory to serve (default: current directory)
+  -a, --host <address>  Host address to listen on (default: "localhost")
+  -p, --port <number>   Port to listen on (default: 5327)
+  -w, --watch           Enable live-reloading on file changes (default: true)
+      --no-watch        Disable live-reloading
+      --cors <origin>   Enable CORS for a specific origin (default: "*")
+
+  -h, --help            Show this help message
+  -v, --version         Show version number
 `
 
 
