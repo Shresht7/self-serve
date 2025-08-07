@@ -1,5 +1,5 @@
 // Deno Standard Library
-import { join, extname } from "@std/path"
+import { join, extname, toFileUrl } from "@std/path"
 import { green, gray, cyan } from "@std/fmt/colors"
 import { getColoredStatusText } from "./src/helpers/index.ts"
 
@@ -132,14 +132,14 @@ class Self {
     private async handleApiRequest(req: Request): Promise<Response> {
         const url = new URL(req.url)
         const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
-        const apiFilePath = join(Deno.cwd(), this.apiDir, apiPath + '.ts') // Assume .ts for now
+        const apiFilePath = join(Deno.cwd(), this.dir, this.apiDir, apiPath + '.ts') // Assume .ts for now
 
         try {
             // Check if the API file exists
             await Deno.stat(apiFilePath)
 
             // Dynamically import the API module
-            const apiModule = await import(apiFilePath)
+            const apiModule = await import(toFileUrl(apiFilePath).toString())
 
             // Get the HTTP method function (e.g., GET, POST)
             const method = req.method.toUpperCase()
