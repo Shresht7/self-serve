@@ -144,46 +144,6 @@ class Self {
     }
 
     /**
-     * Handles API requests by dynamically importing and executing API modules.
-     * @param req - The incoming Request object.
-     * @returns A Promise that resolves to a Response object.
-     */
-    private async handleApiRequest(req: Request): Promise<Response> {
-        const url = new URL(req.url)
-        const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
-        const apiFilePath = join(Deno.cwd(), this.dir, this.apiDir, apiPath + '.ts') // Assume .ts for now
-
-        try {
-            // Check if the API file exists
-            await Deno.stat(apiFilePath)
-
-            // Dynamically import the API module
-            const apiModule = await import(toFileUrl(apiFilePath).toString())
-
-            // Get the HTTP method function (e.g., GET, POST)
-            const method = req.method.toUpperCase()
-            const handler = apiModule[method]
-
-            if (typeof handler === 'function') {
-                // Execute the handler and return its response
-                return await handler(req)
-            } else {
-                return new Response(`Method ${method} not allowed for ${apiPath}`, { status: 405 })
-            }
-        } catch (error) {
-            if (error instanceof Deno.errors.NotFound) {
-                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
-            } else if (error instanceof TypeError && error.message.includes('Module not found')) {
-                // This catches import errors for non-existent modules
-                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
-            } else {
-                console.error(`Error handling API request for ${apiPath}:`, error)
-                return new Response('Internal Server Error', { status: 500 })
-            }
-        }
-    }
-
-    /**
      * Checks if the requested path is valid and does not contain suspicious patterns
      * @returns an Error {@link Response} if there is an issue, or {@link null} if there isn't
      */
@@ -267,6 +227,47 @@ class Self {
 
         return new Response(content, { headers })
     }
+
+    /**
+     * Handles API requests by dynamically importing and executing API modules.
+     * @param req - The incoming Request object.
+     * @returns A Promise that resolves to a Response object.
+     */
+    private async handleApiRequest(req: Request): Promise<Response> {
+        const url = new URL(req.url)
+        const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
+        const apiFilePath = join(Deno.cwd(), this.dir, this.apiDir, apiPath + '.ts') // Assume .ts for now
+
+        try {
+            // Check if the API file exists
+            await Deno.stat(apiFilePath)
+
+            // Dynamically import the API module
+            const apiModule = await import(toFileUrl(apiFilePath).toString())
+
+            // Get the HTTP method function (e.g., GET, POST)
+            const method = req.method.toUpperCase()
+            const handler = apiModule[method]
+
+            if (typeof handler === 'function') {
+                // Execute the handler and return its response
+                return await handler(req)
+            } else {
+                return new Response(`Method ${method} not allowed for ${apiPath}`, { status: 405 })
+            }
+        } catch (error) {
+            if (error instanceof Deno.errors.NotFound) {
+                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
+            } else if (error instanceof TypeError && error.message.includes('Module not found')) {
+                // This catches import errors for non-existent modules
+                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
+            } else {
+                console.error(`Error handling API request for ${apiPath}:`, error)
+                return new Response('Internal Server Error', { status: 500 })
+            }
+        }
+    }
+
     /** Applies CORS headers to a response if the feature is enabled */
     private applyCors(response: Response) {
         if (this.cors) {
