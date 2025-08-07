@@ -4,6 +4,7 @@
     "jsr:@std/assert@^1.0.13": "1.0.13",
     "jsr:@std/cli@^1.0.21": "1.0.21",
     "jsr:@std/fmt@^1.0.8": "1.0.8",
+    "jsr:@std/fs@^1.0.19": "1.0.19",
     "jsr:@std/internal@^1.0.6": "1.0.10",
     "jsr:@std/internal@^1.0.9": "1.0.10",
     "jsr:@std/media-types@^1.1.0": "1.1.0",
@@ -21,6 +22,13 @@
     },
     "@std/fmt@1.0.8": {
       "integrity": "71e1fc498787e4434d213647a6e43e794af4fd393ef8f52062246e06f7e372b7"
+    },
+    "@std/fs@1.0.19": {
+      "integrity": "051968c2b1eae4d2ea9f79a08a3845740ef6af10356aff43d3e2ef11ed09fb06",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.9",
+        "jsr:@std/path"
+      ]
     },
     "@std/internal@1.0.10": {
       "integrity": "e3be62ce42cab0e177c27698e5d9800122f67b766a0bea6ca4867886cbde8cf7"
@@ -40,6 +48,7 @@
       "jsr:@std/assert@^1.0.13",
       "jsr:@std/cli@^1.0.21",
       "jsr:@std/fmt@^1.0.8",
+      "jsr:@std/fs@^1.0.19",
       "jsr:@std/media-types@^1.1.0",
       "jsr:@std/path@^1.1.1"
     ]
