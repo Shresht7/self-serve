@@ -76,6 +76,7 @@ class Self {
             const url = new URL(req.url)
             const start = performance.now() // To time the request-response cycle
 
+            // If live-reloading is enabled, setup the websocket connection
             if (this.liveReload && url.pathname.endsWith(hotReload.MARKER)) {
                 return this.handleWebSocketUpgrade(req)
             }
@@ -334,25 +335,15 @@ class Self {
         }
     }
 
-    /** Handles WebSocket upgrade requests */
+    /** Upgrades the incoming HTTP request to a WebSocket connection */
     private handleWebSocketUpgrade(req: Request): Response {
         const { socket, response } = Deno.upgradeWebSocket(req)
-
-        socket.addEventListener('open', () => {
-            this.wsClients.add(socket)
-            console.log(green(`→ WebSocket client connected (${this.wsClients.size} total)`))
-        })
-
-        socket.addEventListener('close', () => {
-            this.wsClients.delete(socket)
-            console.log(red(`→ WebSocket client disconnected (${this.wsClients.size} remaining)`))
-        })
-
+        socket.addEventListener('open', () => this.wsClients.add(socket))
+        socket.addEventListener('close', () => this.wsClients.delete(socket))
         socket.addEventListener('error', (error) => {
             this.wsClients.delete(socket)
             console.error(red(`→ WebSocket error:`), error)
         })
-
         return response
     }
 
