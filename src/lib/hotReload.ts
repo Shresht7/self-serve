@@ -1,3 +1,5 @@
+export const MARKER = "__hot_reload__" as const
+
 /**
  * Generates the JavaScript code for the hot-reload client-side script.
  * @param host The host address for the WebSocket connection.
@@ -7,7 +9,7 @@
 export function generateHotReloadScript(host: string, port: number) {
     return /* JavaScript */ `
         function setupHotReload() {
-            const socket = new WebSocket('ws://${host}:${port}/__hot_reload__')
+            const socket = new WebSocket('ws://${host}:${port}/${MARKER}')
             socket.addEventListener('open', () => console.log('🔥 Hot-Reload WebSocket Connection Established'))
             socket.addEventListener('message', (event) => {
                 const data = JSON.parse(event.data)
@@ -37,7 +39,7 @@ export function generateHotReloadScript(host: string, port: number) {
                 if (shouldReload) {
                     const newLink = link.cloneNode()
                     const url = new URL(href, window.location.origin)
-                    url.searchParams.set('__hot_reload__', Date.now().toString())
+                    url.searchParams.set(MARKER, Date.now().toString())
                     newLink.href = url.toString()
 
                     // Replace the old link with the new one

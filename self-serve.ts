@@ -76,7 +76,7 @@ class Self {
             const url = new URL(req.url)
             const start = performance.now() // To time the request-response cycle
 
-            if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
+            if (this.liveReload && url.pathname.endsWith(hotReload.MARKER)) {
                 return this.handleWebSocketUpgrade(req)
             }
 
