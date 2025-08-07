@@ -14,6 +14,7 @@ Usage:
   self-serve public               # Serve 'public' directory
   self-serve --port 8080          # Use a different port
   self-serve --no-watch           # Disable live-reloading
+  self-serve --spa                # Enable SPA mode (fallback to index.html)
 
 Options:
   -d, --dir <path>      Directory to serve (default: current directory)
@@ -22,6 +23,7 @@ Options:
   -w, --watch           Enable live-reloading on file changes (default: true)
       --no-watch        Disable live-reloading
       --cors <origin>   Enable CORS for a specific origin (default: "*")
+      --spa             Enable SPA mode (fallback to index.html)
 
   -h, --help            Show this help message
   -v, --version         Show version number
@@ -33,7 +35,7 @@ Options:
 export function parse(args: string[]) {
     const flags = parseArgs(args, {
         string: ["dir", "host", "port", "cors"],
-        boolean: ["watch", "help", "version"],
+        boolean: ["watch", "help", "version", "spa"],
         negatable: ["watch"],
         alias: {
             "help": "h",
@@ -49,6 +51,7 @@ export function parse(args: string[]) {
             port: DEFAULT_PORT,
             watch: true,
             cors: "*",
+            spa: false,
         },
     })
 
