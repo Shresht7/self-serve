@@ -1,5 +1,7 @@
 // Deno Standard Library
 import { join, extname } from "jsr:@std/path"
+import { green, gray, cyan } from "jsr:@std/fmt/colors"
+import { getColoredStatusText } from "./src/helpers/index.ts"
 
 // Modules
 import * as cli from './src/cli.ts'
@@ -53,6 +55,7 @@ class Self {
         // Define the request handler
         const handler = async (req: Request): Promise<Response> => {
             const url = new URL(req.url)
+            const start = performance.now()
 
             // Handle WebSocket upgrade for hot-reload
             // Handle WebSocket upgrade for hot-reload if enabled
@@ -60,12 +63,15 @@ class Self {
                 return this.handleWebSocketUpgrade(req)
             }
 
-            // Log the request
-            console.log(`\x1b[90m-- ${helpers.getClientIP(req)} \x1b[92m${req.method}\x1b[0m ${url.pathname}`)
-
             // Serve static files
             const response = await this.handleRequest(url.pathname)
             if (this.cors) { this.applyCors(response) }
+
+            // Log the request
+            const duration = (performance.now() - start).toFixed(2)
+            const statusText = getColoredStatusText(response.status)
+            console.log(gray(`-- ${helpers.getClientIP(req)} ${green(req.method)} ${url.pathname} ${statusText} ${cyan(`${duration}ms`)}`))
+
             return response
         }
 
