@@ -16,6 +16,7 @@ interface SelfServeOptions {
     watch: boolean
     cors: string
     spa: boolean
+    apiDir: string
 }
 
 class Self {
@@ -25,6 +26,7 @@ class Self {
     private liveReload: boolean
     private cors: string
     private spa: boolean
+    private apiDir: string
     private watcher: Deno.FsWatcher | null = null
     private watchFor: string[] = ['html', 'css', 'js', 'json', 'svg', 'png', 'jpg', 'jpeg']
     private wsClients: Set<WebSocket> = new Set()
@@ -41,6 +43,7 @@ class Self {
         this.liveReload = options.watch
         this.cors = options.cors
         this.spa = options.spa
+        this.apiDir = options.apiDir
 
         // Handle graceful shutdown
         this.handleGracefulShutdown()
@@ -58,14 +61,19 @@ class Self {
             const url = new URL(req.url)
             const start = performance.now()
 
+            let response: Response
+
             // Handle WebSocket upgrade for hot-reload
-            // Handle WebSocket upgrade for hot-reload if enabled
             if (this.liveReload && url.pathname.endsWith('__hot_reload__')) {
-                return this.handleWebSocketUpgrade(req)
+                response = this.handleWebSocketUpgrade(req)
+            } else if (url.pathname.startsWith('/api/')) {
+                // Handle API requests
+                response = await this.handleApiRequest(req)
+            } else {
+                // Serve static files
+                response = await this.handleRequest(url.pathname)
             }
 
-            // Serve static files
-            const response = await this.handleRequest(url.pathname)
             if (this.cors) { this.applyCors(response) }
 
             // Log the request
@@ -113,6 +121,46 @@ class Self {
             }
         } catch (error) {
             return this.createErrorResponse(error as Error, pathName)
+        }
+    }
+
+    /**
+     * Handles API requests by dynamically importing and executing API modules.
+     * @param req - The incoming Request object.
+     * @returns A Promise that resolves to a Response object.
+     */
+    private async handleApiRequest(req: Request): Promise<Response> {
+        const url = new URL(req.url)
+        const apiPath = url.pathname.substring(this.apiDir.length + 1) // Remove /api/ prefix
+        const apiFilePath = join(Deno.cwd(), this.apiDir, apiPath + '.ts') // Assume .ts for now
+
+        try {
+            // Check if the API file exists
+            await Deno.stat(apiFilePath)
+
+            // Dynamically import the API module
+            const apiModule = await import(apiFilePath)
+
+            // Get the HTTP method function (e.g., GET, POST)
+            const method = req.method.toUpperCase()
+            const handler = apiModule[method]
+
+            if (typeof handler === 'function') {
+                // Execute the handler and return its response
+                return await handler(req)
+            } else {
+                return new Response(`Method ${method} not allowed for ${apiPath}`, { status: 405 })
+            }
+        } catch (error) {
+            if (error instanceof Deno.errors.NotFound) {
+                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
+            } else if (error instanceof TypeError && error.message.includes('Module not found')) {
+                // This catches import errors for non-existent modules
+                return new Response(`API endpoint not found: ${apiPath}`, { status: 404 })
+            } else {
+                console.error(`Error handling API request for ${apiPath}:`, error)
+                return new Response('Internal Server Error', { status: 500 })
+            }
         }
     }
 
@@ -385,6 +433,7 @@ async function main() {
         watch: args.watch,
         cors: args.cors,
         spa: args.spa,
+        apiDir: args.api,
     })
 
     console.info(`Serving \x1b[33m${args.dir}\x1b[0m on \x1b[4;36mhttp://${args.host}:${args.port}\x1b[0m`)
