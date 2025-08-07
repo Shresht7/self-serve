@@ -236,7 +236,7 @@ class Self {
     private handleApiRequest(req: Request): Promise<Response> {
         const url = new URL(req.url)
         const endpoint = url.pathname.substring(this.apiDir.length + 1) // Remove apiDir prefix
-        const apiDir = join(Deno.cwd(), this.dir, this.apiDir)
+        const apiDir = join(this.dir, this.apiDir)
         return api.handleServerFunction(apiDir, endpoint, req)
     }
 
