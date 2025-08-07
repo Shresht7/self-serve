@@ -9,7 +9,7 @@ import * as template from './src/templates/index.ts'
 import * as hotReload from './src/lib/hotReload.ts'
 import * as helpers from './src/helpers/index.ts'
 
-interface SelfServeOptions {
+interface Config {
     dir: string
     host: string
     port: number
@@ -34,16 +34,16 @@ class Self {
 
     /**
      * Creates a new instance of the Self server
-     * @param options - The configuration options for the server
+     * @param cfg - The configuration options for the server
      */
-    constructor(options: SelfServeOptions) {
-        this.dir = options.dir
-        this.host = options.host
-        this.port = options.port
-        this.liveReload = options.watch
-        this.cors = options.cors
-        this.spa = options.spa
-        this.apiDir = options.apiDir
+    constructor(cfg: Config) {
+        this.dir = cfg.dir
+        this.host = cfg.host
+        this.port = cfg.port
+        this.liveReload = cfg.watch
+        this.cors = cfg.cors
+        this.spa = cfg.spa
+        this.apiDir = cfg.apiDir
 
         // Handle graceful shutdown
         this.handleGracefulShutdown()
