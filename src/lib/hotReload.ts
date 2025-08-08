@@ -8,6 +8,8 @@ export const MARKER = "__hot_reload__" as const
  */
 export function generateHotReloadScript(host: string, port: number) {
     return /* JavaScript */ `
+        const MARKER = '__hot_reload__'
+
         function setupHotReload() {
             const socket = new WebSocket('ws://${host}:${port}/${MARKER}')
             socket.addEventListener('open', () => console.log('🔥 Hot-Reload WebSocket Connection Established'))
