@@ -103,6 +103,7 @@ self-serve --api api
 | `--cors [origin]`        |       | Enable CORS, optionally specifying an origin.   | `*` (if flag is present) |
 | `--spa`                  |       | Enable SPA mode (fallback to `index.html`).     |                          |
 | `--api <path>`           |       | Enable API routes from the specified directory. | `api/`                   |
+| `--show-dotfiles`        |       | Show dotfiles in directory listings.            | `false`                  |
 | `--help`                 | `-h`  | Show the help message.                          |                          |
 | `--version`              | `-v`  | Print the application version.                  |                          |
 
@@ -120,8 +121,8 @@ self-serve --api api
 - Images and JavaScript files get a `Cache-Control: public, max-age=0, must-revalidate` header; other file types have no explicit caching directive.
 - Path-traversal attempts (e.g. `../../etc/passwd`) and null-byte injection are blocked by resolving and comparing real paths before serving.
 
-> [!CAUTION]
-> Dotfiles (e.g. `.env`, `.git/`) are **not** hidden, be mindful of what directory you point `self-serve` at. I should probably add a way to hide sensitive files, but for now, just be careful.
+> [!NOTE]
+> dotfiles (like `.env`) are **hidden** by default in directory listings. Use the `--show-dotfiles` flag to reveal them.
 
 **Known limitations**, compared to a production-grade static file server such as [`@std/http/file-server`](https://jsr.io/@std/http/doc/file-server):
 - No `ETag` / `If-Modified-Since` conditional-request support.
