@@ -1,6 +1,8 @@
 import { parseArgs } from "@std/cli"
 
-const VERSION = "v0.4.0"
+import denoJSON from "../deno.json" with { type: "json" }
+
+const VERSION = `v${denoJSON.version}`
 
 const DEFAULT_HOST = "localhost"
 const DEFAULT_PORT = "5327"
