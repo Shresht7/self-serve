@@ -1,3 +1,17 @@
+/**
+ * `self-serve` is a simple, zero-dependency static file server for local development
+ * with live-reload, CSS hot-swap, SPA fallback, directory listing, and file-based API routes.
+ *
+ * This is the CLI entrypoint. For programmatic/library usage, see the `./server` export.
+ *
+ * @example
+ * ```sh
+ * deno run --allow-net --allow-read jsr:@shresht7/self-serve
+ * ```
+ *
+ * @module
+ */
+
 // Deno Standard Library
 import { cyan, red, yellow, underline, italic } from "@std/fmt/colors"
 

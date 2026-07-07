@@ -1,3 +1,27 @@
+/**
+ * The core `Self` server implementation, usable as a library
+ * for programmatic control over the server lifecycle.
+ *
+ * @example
+ * ```ts
+ * import { Self } from "jsr:@shresht7/self-serve/server"
+ *
+ * const server = new Self({
+ *     dir: "./public",
+ *     host: "localhost",
+ *     port: 3000,
+ *     watch: true,
+ *     cors: "*",
+ *     spa: false,
+ *     apiDir: "api/",
+ * })
+ *
+ * await server.serve()
+ * ```
+ *
+ * @module
+ */
+
 // Deno Standard Library
 import { join, extname } from "@std/path"
 import { green, gray, cyan, red } from "@std/fmt/colors"
