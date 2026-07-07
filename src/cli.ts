@@ -20,17 +20,18 @@ Usage:
   self-serve --api api            # Enable API routes from the 'api' directory
 
 Options:
-  -d, --dir <path>      Directory to serve (default: current directory)
-  -a, --host <address>  Host address to listen on (default: "localhost")
-  -p, --port <number>   Port to listen on (default: 5327)
-  -w, --watch           Enable live-reloading on file changes (default: true)
-      --no-watch        Disable live-reloading
-      --cors <origin>   Enable CORS for a specific origin (default: "*")
-      --spa             Enable SPA mode (fallback to index.html)
-      --api <path>      Enable API routes from the specified directory (default: "api/")
+  -d, --dir <path>          Directory to serve (default: current directory)
+  -a, --host <address>      Host address to listen on (default: "localhost")
+  -p, --port <number>       Port to listen on (default: 5327)
+  -w, --watch               Enable live-reloading on file changes (default: true)
+      --no-watch            Disable live-reloading
+      --cors <origin>       Enable CORS for a specific origin (default: "*")
+      --spa                 Enable SPA mode (fallback to index.html)
+      --api <path>          Enable API routes from the specified directory (default: "api/")
+      --show-dotfiles       Show dotfiles (e.g. .env) in directory listings (default: false)
 
-  -h, --help            Show this help message
-  -v, --version         Show version number
+  -h, --help                Show this help message
+  -v, --version             Show version number
 `
 
 
@@ -39,7 +40,7 @@ Options:
 export function parse(args: string[]) {
     const flags = parseArgs(args, {
         string: ["dir", "host", "port", "cors", "api"],
-        boolean: ["watch", "help", "version", "spa"],
+        boolean: ["watch", "help", "version", "spa", "show-dotfiles"],
         negatable: ["watch"],
         alias: {
             "help": "h",
@@ -54,6 +55,7 @@ export function parse(args: string[]) {
             host: DEFAULT_HOST,
             port: DEFAULT_PORT,
             watch: true,
+            "show-dotfiles": false,
             cors: "*",
             spa: false,
             api: "api/",

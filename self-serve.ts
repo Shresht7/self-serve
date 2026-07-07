@@ -46,6 +46,7 @@ async function main() {
         host: args.host,
         port: args.port,
         watch: args.watch,
+        showDotfiles: args["show-dotfiles"],
         cors: args.cors,
         spa: args.spa,
         apiDir: args.api,

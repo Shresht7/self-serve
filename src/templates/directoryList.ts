@@ -1,5 +1,5 @@
 /** Generates the HTML for a directory listing page */
-export async function generateDirectoryListingPage(pathName: string, resolvedPath: string): Promise<string> {
+export async function generateDirectoryListingPage(pathName: string, resolvedPath: string, showDotfiles = false): Promise<string> {
     let fileList = ''
     const entries = []
     for await (const entry of Deno.readDir(resolvedPath)) {
@@ -13,6 +13,7 @@ export async function generateDirectoryListingPage(pathName: string, resolvedPat
     })
 
     for (const entry of entries) {
+        if (!showDotfiles && entry.name.startsWith('.')) continue
         const slash = entry.isDirectory ? '/' : ''
         const href = `${pathName.endsWith('/') ? '' : pathName + '/'}${entry.name}${slash}`
         fileList += `<li><a href="${href}">${entry.name}${slash}</a></li>`
