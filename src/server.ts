@@ -258,7 +258,7 @@ export class Self {
             }
 
             this.watcher = Deno.watchFs(this.dir)
-            let debounceTimer: number | null = null
+            let debounceTimer: ReturnType<typeof setTimeout> | null = null
             let isShuttingDown = false
 
             // Handle graceful shutdown
