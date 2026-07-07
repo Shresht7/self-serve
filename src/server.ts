@@ -49,6 +49,8 @@ export interface Config {
     spa: boolean
     /** Path to the server-actions api directory */
     apiDir: string
+    /** Whether to show dotfiles in directory listings */
+    showDotfiles?: boolean
 }
 
 /**
@@ -74,6 +76,8 @@ export class Self {
     private cors: string
     /** Whether to enable SPA fallback routing */
     private spa: boolean
+    /** Whether to show dotfiles in directory listings */
+    private showDotfiles: boolean
     /** Path to the server-actions api directory */
     private apiDir: string
     /** File-System Watcher for hot-reloading */
@@ -96,6 +100,7 @@ export class Self {
         this.liveReload = cfg.watch
         this.cors = cfg.cors
         this.spa = cfg.spa
+        this.showDotfiles = cfg.showDotfiles ?? false
         this.apiDir = cfg.apiDir
         this.setupShutdownListener()
     }
@@ -166,6 +171,17 @@ export class Self {
         const errResponse = await this.checkPath(pathName, resolvedPath, this.dir)
         if (errResponse) { return errResponse }
 
+        // Block access to dotfiles if not explicitly enabled
+        if (!this.showDotfiles) {
+            const segments = decodedPathName.split('/').filter(s => s.length > 0)
+            if (segments.some(s => s.startsWith('.'))) {
+                return new Response(template.generateNotFoundPage(pathName), {
+                    status: 404,
+                    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                })
+            }
+        }
+
         try {
             const fileInfo = await Deno.stat(resolvedPath)
             if (fileInfo.isDirectory) {
@@ -220,7 +236,7 @@ export class Self {
             return await this.serveFile(indexPath)
         } catch (error) {
             if (error instanceof Deno.errors.NotFound) {
-                const dirList = await template.generateDirectoryListingPage(pathName, path)
+                const dirList = await template.generateDirectoryListingPage(pathName, path, this.showDotfiles)
                 return new Response(dirList, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
             }
             throw error
