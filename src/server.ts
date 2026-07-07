@@ -171,6 +171,17 @@ export class Self {
         const errResponse = await this.checkPath(pathName, resolvedPath, this.dir)
         if (errResponse) { return errResponse }
 
+        // Block access to dotfiles if not explicitly enabled
+        if (!this.showDotfiles) {
+            const segments = decodedPathName.split('/').filter(s => s.length > 0)
+            if (segments.some(s => s.startsWith('.'))) {
+                return new Response(template.generateNotFoundPage(pathName), {
+                    status: 404,
+                    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                })
+            }
+        }
+
         try {
             const fileInfo = await Deno.stat(resolvedPath)
             if (fileInfo.isDirectory) {
