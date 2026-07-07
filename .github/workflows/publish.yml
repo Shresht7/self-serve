@@ -1,0 +1,30 @@
+name: Publish
+
+on:
+    release:
+        types: [published]
+
+permissions:
+    contents: read
+    id-token: write # required for OIDC auth with JSR
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
+            - run: deno test --allow-read
+            - run: deno publish --dry-run
+
+    publish:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
+            - run: deno publish
