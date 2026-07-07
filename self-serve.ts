@@ -3,7 +3,7 @@ import { cyan, red, yellow, underline, italic } from "@std/fmt/colors"
 
 // Modules
 import * as cli from './src/cli.ts'
-import { Self } from './src/serve.ts'
+import { Self } from './src/server.ts'
 
 // ----
 // MAIN
