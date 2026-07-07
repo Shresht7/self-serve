@@ -19,9 +19,12 @@ export async function handleServerFunction(dir: string, endpoint: string, req: R
         return new Response(`API endpoint not found: ${endpoint}`, { status: 404 })
     }
 
+    // Dynamically import the API module
     let apiModule
     try {
-        // Dynamically import the API module
+        // NOTE: This path is resolved from the user's served directory at request time,
+        // and not from this package's own module graph; so it can't be statically analyzed,
+        // JSR's `unanalyzable-dynamic-import` warning here is benign and expected
         apiModule = await import(toFileUrl(serverFunctionPath).toString())
     } catch (error) {
         console.error(red(`Error handling API request for ${endpoint}:`), error)
