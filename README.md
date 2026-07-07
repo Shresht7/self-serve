@@ -94,17 +94,17 @@ self-serve --api api
 
 ### Arguments
 
-| Flag                     | Alias | Description                                                       | Default                  |
-| :----------------------- | :---: | :---------------------------------------------------------------- | :----------------------- |
-| `--dir`                  | `-d`  | The directory to serve. Can also be passed as the first argument. | `.` (current directory)  |
-| `--port`                 | `-p`  | The port to listen on.                                            | `5327`                   |
-| `--host`                 | `-a`  | The host address to bind to.                                      | `localhost`              |
-| `--watch` / `--no-watch` | `-w`  | Enable or disable the live-reloading feature.                     | `--watch`                |
-| `--cors [origin]`        |       | Enable CORS, optionally specifying an origin.                     | `*` (if flag is present) |
-| `--spa`                  |       | Enable SPA mode (fallback to `index.html`).                       |                          |
-| `--api <path>`           |       | Enable API routes from the specified directory.                   | `api/`                   |
-| `--help`                 | `-h`  | Show the help message.                                            |                          |
-| `--version`              | `-v`  | Print the application version.                                    |                          |
+| Flag                     | Alias | Description                                     | Default                  |
+| :----------------------- | :---: | :---------------------------------------------- | :----------------------- |
+| `--dir`                  | `-d`  | The directory to serve.                         | `.` (current directory)  |
+| `--port`                 | `-p`  | The port to listen on.                          | `5327`                   |
+| `--host`                 | `-a`  | The host address to bind to.                    | `localhost`              |
+| `--watch` / `--no-watch` | `-w`  | Enable or disable the live-reloading feature.   | `--watch`                |
+| `--cors [origin]`        |       | Enable CORS, optionally specifying an origin.   | `*` (if flag is present) |
+| `--spa`                  |       | Enable SPA mode (fallback to `index.html`).     |                          |
+| `--api <path>`           |       | Enable API routes from the specified directory. | `api/`                   |
+| `--help`                 | `-h`  | Show the help message.                          |                          |
+| `--version`              | `-v`  | Print the application version.                  |                          |
 
 ---
 
