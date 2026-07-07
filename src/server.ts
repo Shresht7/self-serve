@@ -1,3 +1,27 @@
+/**
+ * The core `Self` server implementation, usable as a library
+ * for programmatic control over the server lifecycle.
+ *
+ * @example
+ * ```ts
+ * import { Self } from "jsr:@shresht7/self-serve/server"
+ *
+ * const server = new Self({
+ *     dir: "./public",
+ *     host: "localhost",
+ *     port: 3000,
+ *     watch: true,
+ *     cors: "*",
+ *     spa: false,
+ *     apiDir: "api/",
+ * })
+ *
+ * await server.serve()
+ * ```
+ *
+ * @module
+ */
+
 // Deno Standard Library
 import { join, extname } from "@std/path"
 import { green, gray, cyan, red } from "@std/fmt/colors"
@@ -9,6 +33,7 @@ import * as api from './lib/serverFunctions.ts'
 import * as helpers from './helpers/index.ts'
 
 
+/** Configuration options for the {@link Self} server */
 export interface Config {
     /** The directory to serve files from */
     dir: string
@@ -26,6 +51,16 @@ export interface Config {
     apiDir: string
 }
 
+/**
+ * The core `self-serve` server
+ * 
+ * handles:
+ * - static file serving,
+ * - directory listings,
+ * - live-reload over WebSocket,
+ * - SPA fallback
+ * - file-based API routes.
+ */
 export class Self {
     /** The directory to serve the files from */
     private dir: string
